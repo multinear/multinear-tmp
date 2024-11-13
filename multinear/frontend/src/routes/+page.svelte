@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     // import { onMount } from 'svelte';
     import * as Card from "$lib/components/ui/card";
     import * as Table from "$lib/components/ui/table";
@@ -17,6 +17,7 @@
     } from "lucide-svelte";
     import LineChart from "$lib/components/LineChart.svelte";
     // import BarChart from './BarChart.svelte';
+    import { Loader2 } from "lucide-svelte";
 
     let searchTerm = "";
 
@@ -196,10 +197,61 @@
     const codeRevisions = [...new Set(recentRuns.map(run => run.revision))];
     const dateRanges = ["Today", "This Week", "This Month", "Custom Range"];
     const testGroups = ["All Tests", "Security Tests", "Performance Tests", "Functionality Tests"];
+
+    let currentJob: string | null = null;
+    let jobStatus: string | null = null;
+
+    async function startExperiment() {
+        try {
+            const response = await fetch('http://localhost:8000/start', {
+                method: 'POST',
+            });
+            const data = await response.json();
+            currentJob = data.job_id;
+            jobStatus = 'started';
+            
+            // Start polling
+            while (jobStatus !== 'completed' && jobStatus !== 'not_found') {
+                await new Promise(r => setTimeout(r, 1000)); // Wait 1 second
+                const statusResponse = await fetch('http://localhost:8000/status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ job_id: currentJob }),
+                });
+                const statusData = await statusResponse.json();
+                jobStatus = statusData.status;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            jobStatus = 'error';
+        }
+    }
 </script>
 
 <div class="container mx-auto p-4 space-y-6">
-    <h1 class="text-3xl font-bold">Dashboard Overview</h1>
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">Dashboard Overview</h1>
+        {#if currentJob && jobStatus !== 'completed' && jobStatus !== 'error'}
+            <div class="flex items-center gap-2">
+                <Loader2 class="h-4 w-4 animate-spin" />
+                <span class="text-gray-500">{jobStatus}</span>
+            </div>
+        {:else}
+            <Button on:click={startExperiment}>Run Experiment</Button>
+        {/if}
+    </div>
+
+    {#if currentJob}
+        <div class="border rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center gap-4">
+                <span class="font-medium">Latest Experiment:</span>
+                <span>{currentJob}</span>
+                <span class="text-gray-500">Status: {jobStatus}</span>
+            </div>
+        </div>
+    {/if}
 
     <!-- Summary Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
