@@ -338,17 +338,18 @@
         </Card.Header>
         <Card.Content>
             <Table.Root>
-                <Table.Caption
-                    >Recent experiment runs and their key metadata.</Table.Caption
-                >
+                <Table.Caption>
+                    <!-- Recent experiment runs and their key metadata. -->
+                    <a href="/experiments">View all runs</a>
+                </Table.Caption>
                 <Table.Header>
                     <Table.Row>
                         <Table.Head>Run ID</Table.Head>
                         <Table.Head>Date & Time</Table.Head>
                         <Table.Head>Code Revision</Table.Head>
                         <Table.Head>Model Version</Table.Head>
-                        <Table.Head>Evaluation Score</Table.Head>
                         <Table.Head>Total Tests</Table.Head>
+                        <Table.Head>Evaluation Score</Table.Head>
                         <Table.Head>Test Results</Table.Head>
                         <Table.Head>Actions</Table.Head>
                     </Table.Row>
@@ -361,6 +362,7 @@
                             <Table.Cell>{run.date}</Table.Cell>
                             <Table.Cell>{run.revision}</Table.Cell>
                             <Table.Cell>{run.model}</Table.Cell>
+                            <Table.Cell>{run.totalTests}</Table.Cell>
                             <Table.Cell>
                                 <Badge
                                     variant={run.score >= 0.9
@@ -372,7 +374,6 @@
                                     {run.score.toFixed(2)}
                                 </Badge>
                             </Table.Cell>
-                            <Table.Cell>{run.totalTests}</Table.Cell>
                             <Table.Cell>
                                 <div
                                     class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700"
