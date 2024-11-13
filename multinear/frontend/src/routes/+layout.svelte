@@ -11,7 +11,7 @@
 	const navLinks = [
 		{ href: '/', label: 'Home' },
 		{ href: '/experiments', label: 'Experiments' },
-		{ href: '/comparisons', label: 'Comparisons' }
+		// { href: '/comparisons', label: 'Comparisons' }
 	];
 </script>
 
@@ -30,7 +30,7 @@
 		<!-- Right side: Search and Login -->
 		<div class="flex items-center space-x-4">
 			<Input type="search" placeholder="Search..." class="h-9 md:w-[100px] lg:w-[300px]" />
-			<NavLink href="/settings" label="Settings" />
+			<!-- <NavLink href="/settings" label="Settings" /> -->
 		</div>
 	</div>
 </nav>

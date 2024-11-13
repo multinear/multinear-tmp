@@ -32,7 +32,7 @@
             id: "RUN-001",
             date: "2024-03-15 14:30",
             revision: "a1b2c3d",
-            model: "v1.2.3",
+            model: "gpt4o",
             score: 0.92,
             totalTests: 500,
             pass: 460,
@@ -44,7 +44,7 @@
             id: "RUN-002",
             date: "2024-03-15 12:15",
             revision: "e4f5g6h",
-            model: "v1.2.3",
+            model: "gpt4o",
             score: 0.88,
             totalTests: 480,
             pass: 422,
@@ -56,7 +56,7 @@
             id: "RUN-003",
             date: "2024-03-14 18:45",
             revision: "i7j8k9l",
-            model: "v1.2.2",
+            model: "sonnet-3.5",
             score: 0.79,
             totalTests: 520,
             pass: 411,
@@ -67,7 +67,7 @@
             id: "RUN-004",
             date: "2024-03-14 10:30",
             revision: "m1n2o3p",
-            model: "v1.2.2",
+            model: "gpt4o-mini",
             score: 0.95,
             totalTests: 490,
             pass: 465,
@@ -78,7 +78,7 @@
             id: "RUN-005",
             date: "2024-03-13 16:20",
             revision: "q4r5s6t",
-            model: "v1.2.1",
+            model: "haiku-3.5",
             score: 0.87,
             totalTests: 510,
             pass: 444,
@@ -190,6 +190,12 @@
         responsive: true,
         maintainAspectRatio: false,
     };
+
+    // Add these filter value arrays after recentRuns definition
+    const modelVersions = [...new Set(recentRuns.map(run => run.model))];
+    const codeRevisions = [...new Set(recentRuns.map(run => run.revision))];
+    const dateRanges = ["Today", "This Week", "This Month", "Custom Range"];
+    const testGroups = ["All Tests", "Security Tests", "Performance Tests", "Functionality Tests"];
 </script>
 
 <div class="container mx-auto p-4 space-y-6">
@@ -249,12 +255,9 @@
                     </Select.Trigger>
                     <Select.Content>
                         <Select.Group>
-                            <Select.Item value="today">Today</Select.Item>
-                            <Select.Item value="week">This Week</Select.Item>
-                            <Select.Item value="month">This Month</Select.Item>
-                            <Select.Item value="custom"
-                                >Custom Range</Select.Item
-                            >
+                            {#each dateRanges as range}
+                                <Select.Item value={range.toLowerCase()}>{range}</Select.Item>
+                            {/each}
                         </Select.Group>
                     </Select.Content>
                     <Select.Input name="dateRange" />
@@ -268,9 +271,9 @@
                     </Select.Trigger>
                     <Select.Content>
                         <Select.Group>
-                            <Select.Item value="v1.2.3">v1.2.3</Select.Item>
-                            <Select.Item value="v1.2.2">v1.2.2</Select.Item>
-                            <Select.Item value="v1.2.1">v1.2.1</Select.Item>
+                            {#each modelVersions as version}
+                                <Select.Item value={version}>{version}</Select.Item>
+                            {/each}
                         </Select.Group>
                     </Select.Content>
                     <Select.Input name="modelVersion" />
@@ -284,11 +287,9 @@
                     </Select.Trigger>
                     <Select.Content>
                         <Select.Group>
-                            <Select.Item value="main">main</Select.Item>
-                            <Select.Item value="develop">develop</Select.Item>
-                            <Select.Item value="feature-x"
-                                >feature-x</Select.Item
-                            >
+                            {#each codeRevisions as revision}
+                                <Select.Item value={revision}>{revision}</Select.Item>
+                            {/each}
                         </Select.Group>
                     </Select.Content>
                     <Select.Input name="codeRevision" />
@@ -302,16 +303,9 @@
                     </Select.Trigger>
                     <Select.Content>
                         <Select.Group>
-                            <Select.Item value="all">All Tests</Select.Item>
-                            <Select.Item value="security"
-                                >Security Tests</Select.Item
-                            >
-                            <Select.Item value="performance"
-                                >Performance Tests</Select.Item
-                            >
-                            <Select.Item value="functionality"
-                                >Functionality Tests</Select.Item
-                            >
+                            {#each testGroups as group}
+                                <Select.Item value={group.toLowerCase().replace(' ', '-')}>{group}</Select.Item>
+                            {/each}
                         </Select.Group>
                     </Select.Content>
                     <Select.Input name="testGroup" />
