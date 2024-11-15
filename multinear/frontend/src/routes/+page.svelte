@@ -14,10 +14,13 @@
         XCircle,
         Bookmark,
         FileEdit,
+        Play,
     } from "lucide-svelte";
     import LineChart from "$lib/components/LineChart.svelte";
     // import BarChart from './BarChart.svelte';
     import { Loader2 } from "lucide-svelte";
+    import { startExperiment, getJobStatus } from '$lib/api';
+    import * as Tooltip from "$lib/components/ui/tooltip";
 
     let searchTerm = "";
 
@@ -84,7 +87,7 @@
             totalTests: 510,
             pass: 444,
             fail: 60,
-            regression: 6,
+            regression: 0,
         },
     ];
 
@@ -201,26 +204,16 @@
     let currentJob: string | null = null;
     let jobStatus: string | null = null;
 
-    async function startExperiment() {
+    async function handleStartExperiment() {
         try {
-            const response = await fetch('http://localhost:8000/start', {
-                method: 'POST',
-            });
-            const data = await response.json();
+            const data = await startExperiment();
             currentJob = data.job_id;
             jobStatus = 'started';
             
             // Start polling
             while (jobStatus !== 'completed' && jobStatus !== 'not_found') {
                 await new Promise(r => setTimeout(r, 1000)); // Wait 1 second
-                const statusResponse = await fetch('http://localhost:8000/status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ job_id: currentJob }),
-                });
-                const statusData = await statusResponse.json();
+                const statusData = await getJobStatus(currentJob);
                 jobStatus = statusData.status;
             }
         } catch (error) {
@@ -239,7 +232,10 @@
                 <span class="text-gray-500">{jobStatus}</span>
             </div>
         {:else}
-            <Button on:click={startExperiment}>Run Experiment</Button>
+            <Button variant="primary" on:click={handleStartExperiment} class="flex items-center gap-2">
+                <Play class="h-4 w-4" />
+                Run Experiment
+            </Button>
         {/if}
     </div>
 
@@ -421,28 +417,47 @@
                                 </Badge>
                             </Table.Cell>
                             <Table.Cell>
-                                <div
-                                    class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700"
-                                >
-                                    <div
-                                        class="bg-green-600 h-2.5 rounded-full"
-                                        style="width: {(run.pass /
-                                            run.totalTests) *
-                                            100}%"
-                                    ></div>
-                                    <div
-                                        class="bg-yellow-400 h-2.5 rounded-full"
-                                        style="width: {(run.fail /
-                                            run.totalTests) *
-                                            100}%; margin-top: -0.625rem"
-                                    ></div>
-                                    <div
-                                        class="bg-red-600 h-2.5 rounded-full"
-                                        style="width: {(run.regression /
-                                            run.totalTests) *
-                                            100}%; margin-top: -0.625rem"
-                                    ></div>
-                                </div>
+                                <Tooltip.Root>
+                                    <Tooltip.Trigger class="w-full">
+                                        <div
+                                            class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700"
+                                        >
+                                            <div
+                                                class="bg-green-600 h-4 rounded-sm"
+                                                style="width: {Math.max((run.pass / run.totalTests) * 100, run.pass > 0 ? 5 : 0)}%"
+                                            ></div>
+                                            <div
+                                                class="bg-red-600 h-4 rounded-sm"
+                                                style="width: {Math.max((run.fail / run.totalTests) * 100, run.fail > 0 ? 5 : 0)}%; margin-top: -1rem"
+                                            ></div>
+                                            <div
+                                                class="bg-yellow-400 h-4 rounded-sm"
+                                                style="width: {Math.max((run.regression / run.totalTests) * 100, run.regression > 0 ? 5 : 0)}%; margin-top: -1rem"
+                                            ></div>
+                                        </div>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        <div class="space-y-1">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+                                                <span>Pass: {run.pass} <span class="text-gray-400">({((run.pass / run.totalTests) * 100).toFixed(1)}%)</span></span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-3 h-3 bg-red-600 rounded-full"></div>
+                                                <span>Fail: {run.fail} <span class="text-gray-400">({((run.fail / run.totalTests) * 100).toFixed(1)}%)</span></span>
+                                            </div>
+                                            {#if run.regression > 0}
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                                    <span>Regression: {run.regression} <span class="text-gray-400">({((run.regression / run.totalTests) * 100).toFixed(1)}%)</span></span>
+                                                </div>
+                                            {/if}
+                                            <div class="pt-1 border-t">
+                                                <span>Total: {run.totalTests}</span>
+                                            </div>
+                                        </div>
+                                    </Tooltip.Content>
+                                </Tooltip.Root>
                             </Table.Cell>
                             <Table.Cell>
                                 <div
