@@ -283,8 +283,8 @@
                     <div class="mt-2">
                         <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 relative overflow-hidden">
                             <div 
-                                class="h-4 transition-all duration-300 bg-blue-600 animate-pulse" 
-                                style="width: {jobStatus === 'completed' ? '100' : (jobDetails.current_task! / jobDetails.total_tasks * 100)}%"
+                                class="h-4 transition-all duration-300 bg-blue-600 relative overflow-hidden progress-stripe rounded-r-sm" 
+                                style="width: {jobStatus === 'completed' ? '100' : (jobDetails.current_task! / jobDetails.total_tasks * 100)}%;"
                             ></div>
                             
                             {#if jobDetails.task_status_map}
@@ -638,3 +638,29 @@
         </div>
     {/if}
 </div>
+
+<style>
+    .progress-stripe {
+        background-image: linear-gradient(
+            45deg,
+            rgba(255,255,255,0.15) 25%,
+            transparent 25%,
+            transparent 50%,
+            rgba(255,255,255,0.15) 50%,
+            rgba(255,255,255,0.15) 75%,
+            transparent 75%,
+            transparent
+        );
+        background-size: 16px 16px;
+        animation: move 1s linear infinite;
+    }
+
+    @keyframes move {
+        from {
+            background-position: 0 0;
+        }
+        to {
+            background-position: 16px 0;
+        }
+    }
+</style>
