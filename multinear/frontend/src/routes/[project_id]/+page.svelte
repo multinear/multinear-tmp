@@ -211,6 +211,7 @@
     let currentJob: string | null = null;
     let jobStatus: string | null = null;
     let jobDetails: JobResponse | null = null;
+    let taskStatusCounts: Record<string, number> = {};
 
     async function handleStartExperiment() {
         try {
@@ -224,6 +225,14 @@
                 const statusData = await getJobStatus(projectId, currentJob);
                 jobStatus = statusData.status;
                 jobDetails = statusData;
+                
+                // Calculate status counts
+                if (statusData.task_status_map) {
+                    taskStatusCounts = Object.values(statusData.task_status_map).reduce((acc, status) => {
+                        acc[status] = (acc[status] || 0) + 1;
+                        return acc;
+                    }, {} as Record<string, number>);
+                }
             }
         } catch (error) {
             console.error('Error:', error);
@@ -306,19 +315,50 @@
                 </div>
                 {#if jobDetails}
                     <div class="mt-2">
-                        <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700">
+                        <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 relative">
                             <div 
-                                class="h-4 rounded-sm transition-all duration-300 {jobStatus === 'completed' ? 'bg-green-600' : 'bg-blue-600'}" 
-                                style="width: {jobStatus === 'completed' ? '100' : (jobDetails.current! / jobDetails.total * 100)}%"
+                                class="h-4 rounded-sm transition-all duration-300 bg-blue-600" 
+                                style="width: {jobStatus === 'completed' ? '100' : (jobDetails.current_task! / jobDetails.total_tasks * 100)}%"
                             ></div>
+                            
+                            {#if jobDetails.task_status_map}
+                                {#each Object.entries(jobDetails.task_status_map) as [taskId, status]}
+                                    {#if status === 'failed'}
+                                        <div 
+                                            class="absolute top-0 h-4 bg-red-500"
+                                            style="width: {100 / jobDetails.total_tasks}%; left: {(parseInt(taskId.split('_')[1]) / jobDetails.total_tasks) * 100}%"
+                                        ></div>
+                                    {:else if status === 'completed'}
+                                        <div 
+                                            class="absolute top-0 h-4 bg-green-500"
+                                            style="width: {100 / jobDetails.total_tasks}%; left: {(parseInt(taskId.split('_')[1]) / jobDetails.total_tasks) * 100}%"
+                                        ></div>
+                                    {/if}
+                                {/each}
+                            {/if}
                         </div>
                         <div class="flex justify-between mt-1 text-sm text-gray-500">
-                            <span>{jobDetails?.current || 0} / {jobDetails?.total || 0}</span>
-                            <span>{jobStatus === 'completed' ? '100' : Math.round((jobDetails?.current || 0) / (jobDetails?.total || 1) * 100)}%</span>
+                            <span>{jobDetails?.current_task || 0} / {jobDetails?.total_tasks || 0}</span>
+                            <div class="flex gap-8">
+                                {#if jobDetails.task_status_map}
+                                    <div class="text-sm text-gray-500 flex flex-wrap gap-2">
+                                        {#each Object.entries(taskStatusCounts) as [status, count]}
+                                            {#if count > 0}
+                                                <span class="inline-flex items-center gap-1">
+                                                    <div class="w-2 h-2 rounded-full {
+                                                        status === 'completed' ? 'bg-green-500' : 
+                                                        status === 'running' ? 'bg-blue-500' :
+                                                        status === 'failed' ? 'bg-red-500' : 'bg-gray-500'
+                                                    }"></div>
+                                                    {status}: {count}
+                                                </span>
+                                            {/if}
+                                        {/each}
+                                    </div>
+                                {/if}
+                                <span>{jobStatus === 'completed' ? '100' : Math.round((jobDetails?.current_task || 0) / (jobDetails?.total_tasks || 1) * 100)}%</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-4 mt-2">
-                        <span class="text-gray-500">{jobDetails.details ? JSON.stringify(jobDetails.details) : ''}</span>
                     </div>
                 {/if}
             </div>

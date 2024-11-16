@@ -14,8 +14,9 @@ export interface JobResponse {
     project_id: string;
     job_id: string;
     status: string;
-    total: number;
-    current?: number;
+    total_tasks: number;
+    current_task?: number;
+    task_status_map?: Record<string, string>;
     details?: Record<string, any>;
 }
 

@@ -18,7 +18,7 @@ def run_experiment(project_config: Dict[str, Any]):
         project_config: Project configuration dictionary containing folder path
     
     Yields:
-        Dict containing status updates and final results
+        Dict containing status updates, final results, and status map
     """
     # Get the project folder path
     project_folder = Path(project_config["folder"])
@@ -49,29 +49,50 @@ def run_experiment(project_config: Dict[str, Any]):
     # Run the experiment
     try:
         results = []
-        total_evals = len(config["evals"])
+        task_status_map = {}  # Track status of each evaluation
+        total_tasks = len(config["evals"])
         
-        yield {"status": ExperimentStatus.STARTING, "total": total_evals}
+        yield {"status": ExperimentStatus.STARTING, "total": total_tasks}
         
         for i, test in enumerate(config["evals"]):
+            eval_id = test.get("id", f"eval_{i}")
+            task_status_map[eval_id] = ExperimentStatus.RUNNING
+            current_task = i + 1
+            
             yield {
                 "status": ExperimentStatus.RUNNING,
-                "current": i + 1,
-                "total": total_evals,
-                "details": f"Running eval {i+1}/{total_evals}"
+                "current": current_task,
+                "total": total_tasks,
+                "details": f"Running eval {current_task}/{total_tasks}",
+                "status_map": task_status_map
             }
-            results.append(engine_module.run_single(**test))
+            
+            try:
+                result = engine_module.run_single(**test)
+                results.append(result)
+                task_status_map[eval_id] = ExperimentStatus.COMPLETED
+            except Exception as e:
+                results.append({"error": str(e)})
+                task_status_map[eval_id] = ExperimentStatus.FAILED
         
         yield {
             "status": ExperimentStatus.COMPLETED,
-            "current": total_evals,
-            "total": total_evals,
-            "results": results
+            "current": total_tasks,
+            "total": total_tasks,
+            "results": results,
+            "status_map": task_status_map
         }
 
     except Exception as e:
+        # Update status map for any remaining evals
+        for i, test in enumerate(config["evals"]):
+            eval_id = test.get("id", f"eval_{i}")
+            if eval_id not in task_status_map:
+                task_status_map[eval_id] = ExperimentStatus.FAILED
+                
         yield {
             "status": ExperimentStatus.FAILED,
-            "total": total_evals,
-            "error": str(e)
+            "total": total_tasks,
+            "error": str(e),
+            "status_map": task_status_map
         }

@@ -72,8 +72,9 @@ class JobResponse(BaseModel):
     project_id: str
     job_id: str
     status: str
-    total: int
-    current: Optional[int] = None
+    total_tasks: int
+    current_task: Optional[int] = None
+    task_status_map: Optional[Dict] = None
     details: Optional[Dict] = None
 
 class JobStatusRequest(BaseModel):
@@ -106,7 +107,9 @@ async def start_job(request: StartJobRequest, background_tasks: BackgroundTasks)
         project_id=request.project_id,
         job_id=job_id,
         status="started",
-        total=0
+        total_tasks=0,
+        task_status_map={},
+        details={}
     )
 
 @api_router.post("/status", response_model=JobResponse)
@@ -115,14 +118,14 @@ async def get_job_status(request: JobStatusRequest):
         raise HTTPException(status_code=404, detail="Project not found")
     
     job_state = job_status[request.project_id].get(request.job_id, "not_found")
-    # print(job_state)
     return JobResponse(
         project_id=request.project_id,
         job_id=request.job_id,
         status=job_state["status"].value,
-        total=job_state["total"],
-        current=job_state.get("current", None),
-        details=job_state
+        total_tasks=job_state["total"],
+        current_task=job_state.get("current", None),
+        task_status_map=job_state.get("status_map", {}),
+        details=job_state  # Include full job state
     )
 
 # Include API router
