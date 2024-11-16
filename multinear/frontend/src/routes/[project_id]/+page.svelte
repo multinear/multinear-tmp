@@ -315,9 +315,9 @@
                 </div>
                 {#if jobDetails}
                     <div class="mt-2">
-                        <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 relative">
+                        <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 relative overflow-hidden">
                             <div 
-                                class="h-4 rounded-sm transition-all duration-300 bg-blue-600" 
+                                class="h-4 transition-all duration-300 bg-blue-600" 
                                 style="width: {jobStatus === 'completed' ? '100' : (jobDetails.current_task! / jobDetails.total_tasks * 100)}%"
                             ></div>
                             
@@ -330,7 +330,7 @@
                                         ></div>
                                     {:else if status === 'completed'}
                                         <div 
-                                            class="absolute top-0 h-4 bg-green-500"
+                                            class="absolute top-0 h-4 bg-green-600"
                                             style="width: {100 / jobDetails.total_tasks}%; left: {(parseInt(taskId.split('_')[1]) / jobDetails.total_tasks) * 100}%"
                                         ></div>
                                     {/if}
@@ -338,8 +338,7 @@
                             {/if}
                         </div>
                         <div class="flex justify-between mt-1 text-sm text-gray-500">
-                            <span>{jobDetails?.current_task || 0} / {jobDetails?.total_tasks || 0}</span>
-                            <div class="flex gap-8">
+                            <div class="flex">
                                 {#if jobDetails.task_status_map}
                                     <div class="text-sm text-gray-500 flex flex-wrap gap-2">
                                         {#each Object.entries(taskStatusCounts) as [status, count]}
@@ -356,6 +355,9 @@
                                         {/each}
                                     </div>
                                 {/if}
+                            </div>
+                            <div class="flex gap-8">
+                                <span>{jobDetails?.current_task || 0} / {jobDetails?.total_tasks || 0}</span>
                                 <span>{jobStatus === 'completed' ? '100' : Math.round((jobDetails?.current_task || 0) / (jobDetails?.total_tasks || 1) * 100)}%</span>
                             </div>
                         </div>
@@ -367,36 +369,22 @@
         <!-- Summary Statistics -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card.Root>
-                <Card.Header
-                    class="flex flex-row items-center justify-between space-y-0 pb-2"
-                >
-                    <Card.Title class="text-sm font-medium">Total Runs</Card.Title>
-                </Card.Header>
-                <Card.Content>
+                <Card.Content class="flex items-center justify-between py-4">
+                    <span class="text-md font-medium">Total Runs</span>
                     <div class="text-2xl font-bold">{summaryStats.totalRuns}</div>
                 </Card.Content>
             </Card.Root>
             <Card.Root>
-                <Card.Header
-                    class="flex flex-row items-center justify-between space-y-0 pb-2"
-                >
-                    <Card.Title class="text-sm font-medium">Regressions</Card.Title>
-                </Card.Header>
-                <Card.Content>
+                <Card.Content class="flex items-center justify-between py-4">
+                    <span class="text-md font-medium">Regressions</span>
                     <div class="text-2xl font-bold text-yellow-600">
                         {summaryStats.regressions}
                     </div>
                 </Card.Content>
             </Card.Root>
             <Card.Root>
-                <Card.Header
-                    class="flex flex-row items-center justify-between space-y-0 pb-2"
-                >
-                    <Card.Title class="text-sm font-medium"
-                        >Security Issues</Card.Title
-                    >
-                </Card.Header>
-                <Card.Content>
+                <Card.Content class="flex items-center justify-between py-4">
+                    <span class="text-md font-medium">Security Issues</span>
                     <div class="text-2xl font-bold text-red-600">
                         {summaryStats.securityIssues}
                     </div>
@@ -535,18 +523,18 @@
                                     <Tooltip.Root>
                                         <Tooltip.Trigger class="w-full">
                                             <div
-                                                class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700"
+                                                class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden"
                                             >
                                                 <div
-                                                    class="bg-green-600 h-4 rounded-sm"
+                                                    class="bg-green-600 h-4"
                                                     style="width: {Math.max((run.pass / run.totalTests) * 100, run.pass > 0 ? 5 : 0)}%"
                                                 ></div>
                                                 <div
-                                                    class="bg-red-600 h-4 rounded-sm"
+                                                    class="bg-red-600 h-4"
                                                     style="width: {Math.max((run.fail / run.totalTests) * 100, run.fail > 0 ? 5 : 0)}%; margin-top: -1rem"
                                                 ></div>
                                                 <div
-                                                    class="bg-yellow-400 h-4 rounded-sm"
+                                                    class="bg-yellow-400 h-4"
                                                     style="width: {Math.max((run.regression / run.totalTests) * 100, run.regression > 0 ? 5 : 0)}%; margin-top: -1rem"
                                                 ></div>
                                             </div>
