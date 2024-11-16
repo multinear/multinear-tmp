@@ -39,31 +39,35 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function startExperiment(projectId: string): Promise<JobResponse> {
-    const response = await fetch(`${API_URL}/start`, {
+    const response = await fetch(`${API_URL}/jobs/${projectId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ project_id: projectId }),
     });
+    if (!response.ok) {
+        throw new Error(`Failed to start experiment: ${response.statusText}`);
+    }
     return response.json();
 }
 
 export async function getJobStatus(projectId: string, jobId: string): Promise<JobResponse> {
-    const response = await fetch(`${API_URL}/status`, {
-        method: 'POST',
+    const response = await fetch(`${API_URL}/jobs/${projectId}/${jobId}/status`, {
+        method: 'GET',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ project_id: projectId, job_id: jobId }),
     });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch job status: ${response.statusText}`);
+    }
     return response.json();
 }
 
-export async function getRecentRuns(projectId: string): Promise<RecentRun[]> {
-    const response = await fetch(`${API_URL}/runs/${projectId}`);
+export async function getRecentRuns(projectId: string, limit: number = 5, offset: number = 0): Promise<RecentRun[]> {
+    const response = await fetch(`${API_URL}/runs/${projectId}?limit=${limit}&offset=${offset}`);
     if (!response.ok) {
         throw new Error(`Failed to fetch recent runs: ${response.statusText}`);
     }
     return response.json();
-} 
+}

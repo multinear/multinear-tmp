@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException, APIRouter
+from fastapi import FastAPI, BackgroundTasks, HTTPException, APIRouter, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -76,13 +76,6 @@ class JobResponse(BaseModel):
     task_status_map: Optional[Dict] = None
     details: Optional[Dict] = None
 
-class JobStatusRequest(BaseModel):
-    project_id: str
-    job_id: str
-
-class StartJobRequest(BaseModel):
-    project_id: str
-
 class RecentRun(BaseModel):
     id: str
     date: str
@@ -108,15 +101,15 @@ async def get_projects():
     ]
     return projects_list
 
-@api_router.post("/start", response_model=JobResponse)
-async def start_job(request: StartJobRequest, background_tasks: BackgroundTasks):
-    if request.project_id not in projects:
+@api_router.post("/jobs/{project_id}", response_model=JobResponse)
+async def create_job(project_id: str, background_tasks: BackgroundTasks):
+    if project_id not in projects:
         raise HTTPException(status_code=404, detail="Project not found")
     
     job_id = str(uuid.uuid4())
-    background_tasks.add_task(background_job, request.project_id, job_id)
+    background_tasks.add_task(background_job, project_id, job_id)
     return JobResponse(
-        project_id=request.project_id,
+        project_id=project_id,
         job_id=job_id,
         status="started",
         total_tasks=0,
@@ -124,15 +117,18 @@ async def start_job(request: StartJobRequest, background_tasks: BackgroundTasks)
         details={}
     )
 
-@api_router.post("/status", response_model=JobResponse)
-async def get_job_status(request: JobStatusRequest):
-    if request.project_id not in projects:
+@api_router.get("/jobs/{project_id}/{job_id}/status", response_model=JobResponse)
+async def get_job_status(project_id: str, job_id: str):
+    if project_id not in projects:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    job_state = job_status[request.project_id].get(request.job_id, "not_found")
+    job_state = job_status[project_id].get(job_id, "not_found")
+    if job_state == "not_found":
+        raise HTTPException(status_code=404, detail="Job not found")
+    
     return JobResponse(
-        project_id=request.project_id,
-        job_id=request.job_id,
+        project_id=project_id,
+        job_id=job_id,
         status=job_state["status"].value,
         total_tasks=job_state["total"],
         current_task=job_state.get("current", None),
@@ -189,17 +185,18 @@ def generate_fake_run(job_id: str, job_data: dict, days_ago: int = 0) -> dict:
     }
 
 @api_router.get("/runs/{project_id}", response_model=List[RecentRun])
-async def get_recent_runs(project_id: str):
+async def get_recent_runs(
+    project_id: str,
+    limit: int = Query(5, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
     if project_id not in projects:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Get actual job status data for this project
     project_jobs = job_status.get(project_id, {})
-    
-    # Convert job status data to runs
     runs = []
-    for job_id, job_data in list(project_jobs.items())[-5:]:  # Get last 5 jobs
-        if isinstance(job_data, dict):  # Make sure job_data is valid
+    for job_id, job_data in list(project_jobs.items())[offset:offset+limit]:
+        if isinstance(job_data, dict):
             run = generate_fake_run(job_id, job_data)
             runs.append(run)
     
