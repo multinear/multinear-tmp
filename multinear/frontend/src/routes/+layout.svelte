@@ -19,11 +19,11 @@
 	onMount(async () => {
 		try {
 			const response = await getProjects();
-			if (!response || !response.projects) {
+			if (!response) {
 				projectsError.set("Invalid response from server");
 				return;
 			}
-			projects.set(response.projects);
+			projects.set(response);
 		} catch (e) {
 			projectsError.set(e instanceof Error ? e.message : "Failed to load projects");
 			console.error(e);

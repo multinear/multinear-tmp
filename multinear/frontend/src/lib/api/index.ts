@@ -6,10 +6,6 @@ export interface Project {
     description: string;
 }
 
-export interface ProjectList {
-    projects: Project[];
-}
-
 export interface JobResponse {
     project_id: string;
     job_id: string;
@@ -20,7 +16,21 @@ export interface JobResponse {
     details?: Record<string, any>;
 }
 
-export async function getProjects(): Promise<ProjectList> {
+export interface RecentRun {
+    id: string;
+    date: string;
+    revision: string;
+    model: string;
+    score: number;
+    totalTests: number;
+    pass: number;
+    fail: number;
+    regression: number;
+    bookmarked?: boolean;
+    noted?: boolean;
+}
+
+export async function getProjects(): Promise<Project[]> {
     const response = await fetch(`${API_URL}/projects`);
     if (!response.ok) {
         throw new Error(`Failed to fetch projects: ${response.statusText}`);
@@ -47,5 +57,13 @@ export async function getJobStatus(projectId: string, jobId: string): Promise<Jo
         },
         body: JSON.stringify({ project_id: projectId, job_id: jobId }),
     });
+    return response.json();
+}
+
+export async function getRecentRuns(projectId: string): Promise<RecentRun[]> {
+    const response = await fetch(`${API_URL}/runs/${projectId}`);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch recent runs: ${response.statusText}`);
+    }
     return response.json();
 } 
