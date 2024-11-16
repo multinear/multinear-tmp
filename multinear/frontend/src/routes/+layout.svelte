@@ -5,14 +5,32 @@
 	import logo from '$lib/assets/logo.png';
 	import NavLink from '$lib/components/NavLink.svelte';
 	import { Book } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+	import { getProjects } from '$lib/api';
+	import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
 
 	let { children } = $props();
 
 	const navLinks = [
 		{ href: '/', label: 'Home' },
-		{ href: '/experiments', label: 'Experiments' },
-		// { href: '/comparisons', label: 'Comparisons' }
+		{ href: '/experiments', label: 'Experiments' }
 	];
+
+	onMount(async () => {
+		try {
+			const response = await getProjects();
+			if (!response || !response.projects) {
+				projectsError.set("Invalid response from server");
+				return;
+			}
+			projects.set(response.projects);
+		} catch (e) {
+			projectsError.set(e instanceof Error ? e.message : "Failed to load projects");
+			console.error(e);
+		} finally {
+			projectsLoading.set(false);
+		}
+	});
 </script>
 
 <!-- Top Navigation Bar -->
