@@ -49,28 +49,29 @@ def run_experiment(project_config: Dict[str, Any]):
     # Run the experiment
     try:
         results = []
-        total_tests = len(config["evals"])
+        total_evals = len(config["evals"])
         
-        yield {"status": ExperimentStatus.STARTING, "total_tests": total_tests}
+        yield {"status": ExperimentStatus.STARTING, "total": total_evals}
         
         for i, test in enumerate(config["evals"]):
             yield {
                 "status": ExperimentStatus.RUNNING,
-                "current_test": i + 1,
-                "total_tests": total_tests,
-                "details": f"Running test {i+1}/{total_tests}"
+                "current": i + 1,
+                "total": total_evals,
+                "details": f"Running eval {i+1}/{total_evals}"
             }
             results.append(engine_module.run_single(**test))
         
         yield {
             "status": ExperimentStatus.COMPLETED,
-            "total_tests": total_tests,
+            "current": total_evals,
+            "total": total_evals,
             "results": results
         }
-            
+
     except Exception as e:
         yield {
             "status": ExperimentStatus.FAILED,
-            "total_tests": total_tests,
+            "total": total_evals,
             "error": str(e)
         }

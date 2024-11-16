@@ -14,6 +14,8 @@ export interface JobResponse {
     project_id: string;
     job_id: string;
     status: string;
+    total: number;
+    current?: number;
     details?: Record<string, any>;
 }
 

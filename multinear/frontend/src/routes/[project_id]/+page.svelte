@@ -20,6 +20,7 @@
     // import BarChart from './BarChart.svelte';
     import { Loader2 } from "lucide-svelte";
     import { startExperiment, getJobStatus } from '$lib/api';
+    import type { JobResponse } from '$lib/api';
     import * as Tooltip from "$lib/components/ui/tooltip";
 
     import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
@@ -209,7 +210,7 @@
 
     let currentJob: string | null = null;
     let jobStatus: string | null = null;
-    let jobDetails: string | null = null;
+    let jobDetails: JobResponse | null = null;
 
     async function handleStartExperiment() {
         try {
@@ -222,7 +223,7 @@
                 await new Promise(r => setTimeout(r, 1000));
                 const statusData = await getJobStatus(projectId, currentJob);
                 jobStatus = statusData.status;
-                jobDetails = statusData.details ? JSON.stringify(statusData.details) : null;
+                jobDetails = statusData;
             }
         } catch (error) {
             console.error('Error:', error);
@@ -303,9 +304,23 @@
                     <span>{currentJob}</span>
                     <span class="text-gray-500">Status: {jobStatus}</span>
                 </div>
-                <div class="flex items-center gap-4">
-                    <span class="text-gray-500">{jobDetails}</span>
-                </div>
+                {#if jobDetails}
+                    <div class="mt-2">
+                        <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700">
+                            <div 
+                                class="h-4 rounded-sm transition-all duration-300 {jobStatus === 'completed' ? 'bg-green-600' : 'bg-blue-600'}" 
+                                style="width: {jobStatus === 'completed' ? '100' : (jobDetails.current! / jobDetails.total * 100)}%"
+                            ></div>
+                        </div>
+                        <div class="flex justify-between mt-1 text-sm text-gray-500">
+                            <span>{jobDetails?.current || 0} / {jobDetails?.total || 0}</span>
+                            <span>{jobStatus === 'completed' ? '100' : Math.round((jobDetails?.current || 0) / (jobDetails?.total || 1) * 100)}%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 mt-2">
+                        <span class="text-gray-500">{jobDetails.details ? JSON.stringify(jobDetails.details) : ''}</span>
+                    </div>
+                {/if}
             </div>
         {/if}
 

@@ -72,6 +72,8 @@ class JobResponse(BaseModel):
     project_id: str
     job_id: str
     status: str
+    total: int
+    current: Optional[int] = None
     details: Optional[Dict] = None
 
 class JobStatusRequest(BaseModel):
@@ -103,7 +105,8 @@ async def start_job(request: StartJobRequest, background_tasks: BackgroundTasks)
     return JobResponse(
         project_id=request.project_id,
         job_id=job_id,
-        status="started"
+        status="started",
+        total=0
     )
 
 @api_router.post("/status", response_model=JobResponse)
@@ -112,14 +115,13 @@ async def get_job_status(request: JobStatusRequest):
         raise HTTPException(status_code=404, detail="Project not found")
     
     job_state = job_status[request.project_id].get(request.job_id, "not_found")
-    print(job_state)
-    status = job_state["status"].value
-    print(status)
-    # details = {"progress": status.value} if status != ExperimentStatus. else None
+    # print(job_state)
     return JobResponse(
         project_id=request.project_id,
         job_id=request.job_id,
-        status=status,
+        status=job_state["status"].value,
+        total=job_state["total"],
+        current=job_state.get("current", None),
         details=job_state
     )
 
