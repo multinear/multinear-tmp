@@ -2,13 +2,14 @@ import importlib.util
 from pathlib import Path
 from typing import Dict, Any
 import yaml
-from enum import Enum
 
-class ExperimentStatus(Enum):
+
+class ExperimentStatus:
     STARTING = "starting"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+
 
 def run_experiment(project_config: Dict[str, Any]):
     """

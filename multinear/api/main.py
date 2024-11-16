@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException, APIRouter, Query
+from fastapi import FastAPI, BackgroundTasks, HTTPException, APIRouter, Query, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -7,11 +7,16 @@ import uuid
 import yaml
 from typing import Optional, Dict, List
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import NoResultFound
 
 from .run import run_experiment, ExperimentStatus
+from .storage import init_db, get_db, db_context, ProjectModel, JobModel
 
+
+init_db()
 
 # Create FastAPI app with custom docs URLs
 app = FastAPI(
@@ -45,21 +50,48 @@ for project_id, project_data in config["projects"].items():
         "folder": str(Path(project_data["folder"]).expanduser().resolve())
     }
 
-# print(projects)
+# Update projects in database on startup
+with db_context() as db:
+    for project_id, project_data in config["projects"].items():
+        project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+        if project:
+            # Update existing project details
+            project.name = project_data["name"]
+            project.description = project_data["description"]
+            project.folder = str(Path(project_data["folder"]).expanduser().resolve())
+        else:
+            # Add new project
+            project = ProjectModel(
+                id=project_id,
+                name=project_data["name"],
+                description=project_data["description"],
+                folder=str(Path(project_data["folder"]).expanduser().resolve())
+            )
+            db.add(project)
+    db.commit()
 
-# Initialize job status using the projects config
-job_status = {project_id: {} for project_id in projects}
-
+# Update background_job to persist job to DB
 def background_job(project_id: str, job_id: str):
     """Run the experiment for the given project"""
-    try:
-        for update in run_experiment(projects[project_id]):
-            job_status[project_id][job_id] = update
-    except Exception as e:
-        job_status[project_id][job_id] = {
-            "status": "failed",
-            "error": f"Job execution failed: {str(e)}"
-        }
+    with db_context() as db:
+        try:
+            project = db.query(ProjectModel).filter(ProjectModel.id == project_id).one()
+            job = db.query(JobModel).filter(JobModel.id == job_id).one()  # Get existing job
+            
+            for update in run_experiment(project.to_dict()):
+                # Update job status in DB
+                job.status = update["status"]
+                job.total_tasks = update.get("total", 0)
+                job.current_task = update.get("current")
+                job.details = update
+                db.commit()
+        except Exception as e:
+            db.rollback()
+            # Update job status in DB
+            job = db.query(JobModel).filter(JobModel.id == job_id).one()
+            job.status = "failed"
+            job.details = {"error": str(e)}
+            db.commit()
 
 # Schemas
 class Project(BaseModel):
@@ -92,7 +124,6 @@ class RecentRun(BaseModel):
 # Create API router
 api_router = APIRouter(prefix="/api")
 
-# Move all endpoints to use api_router instead of app
 @api_router.get("/projects", response_model=List[Project])
 async def get_projects():
     projects_list = [
@@ -102,11 +133,16 @@ async def get_projects():
     return projects_list
 
 @api_router.post("/jobs/{project_id}", response_model=JobResponse)
-async def create_job(project_id: str, background_tasks: BackgroundTasks):
-    if project_id not in projects:
+async def create_job(project_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
     job_id = str(uuid.uuid4())
+    job = JobModel(id=job_id, project_id=project_id, status="started")
+    db.add(job)
+    db.commit()
+    
     background_tasks.add_task(background_job, project_id, job_id)
     return JobResponse(
         project_id=project_id,
@@ -118,25 +154,28 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
     )
 
 @api_router.get("/jobs/{project_id}/{job_id}/status", response_model=JobResponse)
-async def get_job_status(project_id: str, job_id: str):
-    if project_id not in projects:
+async def get_job_status(project_id: str, job_id: str, db: Session = Depends(get_db)):
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    job_state = job_status[project_id].get(job_id, "not_found")
-    if job_state == "not_found":
+    try:
+        job = db.query(JobModel).filter(JobModel.id == job_id, JobModel.project_id == project_id).one()
+        details = job.details or {}  # details is already a dict
+        
+        return JobResponse(
+            project_id=project_id,
+            job_id=job_id,
+            status=job.status,
+            total_tasks=job.total_tasks,
+            current_task=job.current_task,
+            task_status_map=details.get("status_map", {}),
+            details=details
+        )
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Job not found")
-    
-    return JobResponse(
-        project_id=project_id,
-        job_id=job_id,
-        status=job_state["status"].value,
-        total_tasks=job_state["total"],
-        current_task=job_state.get("current", None),
-        task_status_map=job_state.get("status_map", {}),
-        details=job_state  # Include full job state
-    )
 
-def generate_fake_run(job_id: str, job_data: dict, days_ago: int = 0) -> dict:
+def generate_fake_run(job_id: str, job_data: dict, created_at: datetime) -> dict:
     total = random.randint(450, 550)
     passed = int(total * random.uniform(0.75, 0.95))
     failed = int(total * random.uniform(0.03, 0.15))
@@ -156,12 +195,9 @@ def generate_fake_run(job_id: str, job_data: dict, days_ago: int = 0) -> dict:
         regression = total - passed - failed
     
     # Use actual timestamp if available, otherwise generate fake
-    if "start_time" in job_data:
-        date = datetime.fromisoformat(job_data["start_time"])
-    else:
-        date = datetime.now() - timedelta(days=days_ago, 
-                                        hours=random.randint(0, 23), 
-                                        minutes=random.randint(0, 59))
+    if isinstance(created_at, int):
+        created_at = datetime.now() - timedelta(hours=random.randint(0, 23), 
+                                                minutes=random.randint(0, 59))
     
     # Calculate score based on actual results if available
     if total > 0:
@@ -172,7 +208,8 @@ def generate_fake_run(job_id: str, job_data: dict, days_ago: int = 0) -> dict:
     
     return {
         "id": job_id,
-        "date": date.strftime("%Y-%m-%d %H:%M"),
+        "date": created_at.replace(tzinfo=timezone.utc).isoformat(),
+        # "date": created_at.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %H:%M %Z"),
         "revision": job_data.get("revision", hex(random.randint(0, 16**8))[2:].zfill(8)),
         "model": job_data.get("model", random.choice(models)),
         "score": score,
@@ -188,17 +225,27 @@ def generate_fake_run(job_id: str, job_data: dict, days_ago: int = 0) -> dict:
 async def get_recent_runs(
     project_id: str,
     limit: int = Query(5, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
 ):
-    if project_id not in projects:
+    if not db.query(ProjectModel).filter(ProjectModel.id == project_id).first():
         raise HTTPException(status_code=404, detail="Project not found")
     
-    project_jobs = job_status.get(project_id, {})
+    # Get recent jobs from database
+    recent_jobs = (
+        db.query(JobModel)
+        .filter(JobModel.project_id == project_id)
+        .order_by(JobModel.created_at.desc())  # Order by timestamp instead of id
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    
     runs = []
-    for job_id, job_data in list(project_jobs.items())[offset:offset+limit]:
-        if isinstance(job_data, dict):
-            run = generate_fake_run(job_id, job_data)
-            runs.append(run)
+    for job in recent_jobs:
+        job_data = job.details or {}
+        run = generate_fake_run(job.id, job_data, job.created_at)
+        runs.append(run)
     
     # If we have fewer than 5 runs from real data, add some fake ones
     while len(runs) < 5:
@@ -206,7 +253,7 @@ async def get_recent_runs(
         runs.append(generate_fake_run(fake_id, {}, len(runs)))
     
     # Sort runs by date, most recent first
-    runs.sort(key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d %H:%M"), reverse=True)
+    # runs.sort(key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d %H:%M"), reverse=True)
     
     return runs
 

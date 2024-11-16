@@ -481,7 +481,12 @@
                             {#each recentRuns as run}
                                 <Table.Row class="group">
                                     <Table.Cell class="font-medium">{run.id}</Table.Cell>
-                                    <Table.Cell>{run.date}</Table.Cell>
+                                    <Table.Cell>
+                                        {new Date(run.date).toLocaleString(undefined, {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short'
+                                        })}
+                                    </Table.Cell>
                                     <Table.Cell>{run.revision}</Table.Cell>
                                     <Table.Cell>{run.model}</Table.Cell>
                                     <Table.Cell>{run.totalTests}</Table.Cell>
