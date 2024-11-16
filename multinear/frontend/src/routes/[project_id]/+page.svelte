@@ -209,18 +209,20 @@
 
     let currentJob: string | null = null;
     let jobStatus: string | null = null;
+    let jobDetails: string | null = null;
 
     async function handleStartExperiment() {
         try {
             const data = await startExperiment(projectId);
             currentJob = data.job_id;
             jobStatus = 'started';
-            
+
             // Start polling
             while (jobStatus !== 'completed' && jobStatus !== 'not_found') {
                 await new Promise(r => setTimeout(r, 1000));
                 const statusData = await getJobStatus(projectId, currentJob);
                 jobStatus = statusData.status;
+                jobDetails = statusData.details ? JSON.stringify(statusData.details) : null;
             }
         } catch (error) {
             console.error('Error:', error);
@@ -297,9 +299,12 @@
         {#if currentJob}
             <div class="border rounded-lg p-4 bg-gray-50">
                 <div class="flex items-center gap-4">
-                    <span class="font-medium">Latest Experiment:</span>
+                    <span class="font-medium">Latest Run:</span>
                     <span>{currentJob}</span>
                     <span class="text-gray-500">Status: {jobStatus}</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-gray-500">{jobDetails}</span>
                 </div>
             </div>
         {/if}

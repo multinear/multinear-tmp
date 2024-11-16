@@ -8,6 +8,8 @@ import yaml
 from typing import Optional, Dict, List
 from pathlib import Path
 
+from .run import run_experiment, ExperimentStatus
+
 
 # Create FastAPI app with custom docs URLs
 app = FastAPI(
@@ -41,19 +43,21 @@ for project_id, project_data in config["projects"].items():
         "folder": str(Path(project_data["folder"]).expanduser().resolve())
     }
 
-print(projects)
+# print(projects)
 
 # Initialize job status using the projects config
 job_status = {project_id: {} for project_id in projects}
 
 def background_job(project_id: str, job_id: str):
-    """Simulate a long-running task"""
-    job_status[project_id][job_id] = "running"
-    # Simulate work
-    for i in range(20):
-        sleep(1)
-        job_status[project_id][job_id] = f"running {i}"
-    job_status[project_id][job_id] = "completed"
+    """Run the experiment for the given project"""
+    try:
+        for update in run_experiment(projects[project_id]):
+            job_status[project_id][job_id] = update
+    except Exception as e:
+        job_status[project_id][job_id] = {
+            "status": "failed",
+            "error": f"Job execution failed: {str(e)}"
+        }
 
 # Schemas
 class Project(BaseModel):
@@ -107,13 +111,16 @@ async def get_job_status(request: JobStatusRequest):
     if request.project_id not in projects:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    status = job_status[request.project_id].get(request.job_id, "not_found")
-    details = {"progress": status} if status.startswith("running") else None
+    job_state = job_status[request.project_id].get(request.job_id, "not_found")
+    print(job_state)
+    status = job_state["status"].value
+    print(status)
+    # details = {"progress": status.value} if status != ExperimentStatus. else None
     return JobResponse(
         project_id=request.project_id,
         job_id=request.job_id,
         status=status,
-        details=details
+        details=job_state
     )
 
 # Include API router
