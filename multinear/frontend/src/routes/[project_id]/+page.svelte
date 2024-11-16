@@ -503,17 +503,21 @@
                                                     class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex"
                                                 >
                                                     <div
-                                                        class="bg-green-600 h-4"
+                                                        class="bg-green-600 h-4 min-w-[5px]"
                                                         style="width: {(run.pass / run.totalTests) * 100}%"
                                                     ></div>
+                                                    {#if run.fail > 0}
                                                     <div
-                                                        class="bg-red-600 h-4"
-                                                        style="width: {(run.fail / run.totalTests) * 100}%"
-                                                    ></div>
-                                                    <div
-                                                        class="bg-yellow-400 h-4"
-                                                        style="width: {(run.regression / run.totalTests) * 100}%"
-                                                    ></div>
+                                                        class="bg-red-600 h-4 min-w-[5px]"
+                                                            style="width: {(run.fail / run.totalTests) * 100}%"
+                                                        ></div>
+                                                    {/if}
+                                                    {#if run.regression > 0}
+                                                        <div
+                                                            class="bg-yellow-400 h-4 min-w-[5px]"
+                                                            style="width: {(run.regression / run.totalTests) * 100}%"
+                                                        ></div>
+                                                    {/if}
                                                 </div>
                                             </Tooltip.Trigger>
                                             <Tooltip.Content>
