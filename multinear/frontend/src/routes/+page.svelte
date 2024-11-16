@@ -11,10 +11,14 @@
 
     onMount(async () => {
         try {
-            const data = await getProjects();
-            projects = data.projects;
+            const response = await getProjects();
+            if (!response || !response.projects) {
+                error = "Invalid response from server";
+                return;
+            }
+            projects = response.projects;
         } catch (e) {
-            error = "Failed to load projects";
+            error = e instanceof Error ? e.message : "Failed to load projects";
             console.error(e);
         } finally {
             loading = false;
@@ -33,7 +37,24 @@
         {#if loading}
             <div class="text-center text-gray-500">Loading projects...</div>
         {:else if error}
-            <div class="text-center text-red-500">{error}</div>
+            <Card.Root class="border-red-200 bg-red-50">
+                <Card.Header>
+                    <Card.Title class="text-red-800">Error</Card.Title>
+                    <Card.Description class="text-red-600">
+                        {error}
+                        <p class="pt-1">Check if API is running</p>
+                    </Card.Description>
+                </Card.Header>
+                <Card.Footer class="flex justify-end">
+                    <Button 
+                        variant="outline" 
+                        class="border-red-200 text-red-800 hover:bg-red-100"
+                        on:click={() => window.location.reload()}
+                    >
+                        Try Again
+                    </Button>
+                </Card.Footer>
+            </Card.Root>
         {:else if projects.length === 0}
             <div class="text-center text-gray-500">No projects found</div>
         {:else}

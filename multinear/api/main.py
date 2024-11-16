@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, APIRouter
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,7 +9,14 @@ from typing import Optional, Dict, List
 from pathlib import Path
 
 
-app = FastAPI()
+# Create FastAPI app with custom docs URLs
+app = FastAPI(
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
+
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,18 +25,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Get the path to config.yaml
+# Get the path to projects.yaml
 current_file = Path(__file__)
 project_root = current_file.parent.parent
 
 # Read project configuration
-with open(project_root / "config.yaml", "r") as f:
+with open(project_root / "projects.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-print(config)
+# Build projects dictionary with resolved paths
+projects = {}
+for project_id, project_data in config["projects"].items():
+    projects[project_id] = {
+        **project_data,
+        "folder": str(Path(project_data["folder"]).expanduser().resolve())
+    }
 
-# Modified to store jobs per project
-job_status = {project_id: {} for project_id in config["projects"]}
+print(projects)
+
+# Initialize job status using the projects config
+job_status = {project_id: {} for project_id in projects}
 
 def background_job(project_id: str, job_id: str):
     """Simulate a long-running task"""
@@ -62,19 +77,21 @@ class JobStatusRequest(BaseModel):
 class StartJobRequest(BaseModel):
     project_id: str
 
-# Get projects
-@app.get("/projects", response_model=ProjectList)
-async def get_projects():
-    projects = [
-        Project(id=pid, name=pdata["name"], description=pdata["description"])
-        for pid, pdata in config["projects"].items()
-    ]
-    return ProjectList(projects=projects)
+# Create API router
+api_router = APIRouter(prefix="/api")
 
-# Start a job
-@app.post("/start", response_model=JobResponse)
+# Move all endpoints to use api_router instead of app
+@api_router.get("/projects", response_model=ProjectList)
+async def get_projects():
+    projects_list = [
+        Project(id=pid, name=pdata["name"], description=pdata["description"])
+        for pid, pdata in projects.items()
+    ]
+    return ProjectList(projects=projects_list)
+
+@api_router.post("/start", response_model=JobResponse)
 async def start_job(request: StartJobRequest, background_tasks: BackgroundTasks):
-    if request.project_id not in config["projects"]:
+    if request.project_id not in projects:
         raise HTTPException(status_code=404, detail="Project not found")
     
     job_id = str(uuid.uuid4())
@@ -85,10 +102,9 @@ async def start_job(request: StartJobRequest, background_tasks: BackgroundTasks)
         status="started"
     )
 
-# Get job status
-@app.post("/status", response_model=JobResponse)
+@api_router.post("/status", response_model=JobResponse)
 async def get_job_status(request: JobStatusRequest):
-    if request.project_id not in config["projects"]:
+    if request.project_id not in projects:
         raise HTTPException(status_code=404, detail="Project not found")
     
     status = job_status[request.project_id].get(request.job_id, "not_found")
@@ -99,6 +115,9 @@ async def get_job_status(request: JobStatusRequest):
         status=status,
         details=details
     )
+
+# Include API router
+app.include_router(api_router)
 
 # Serve frontend
 app.mount("/", StaticFiles(directory="frontend/build", html=True), name="frontend")

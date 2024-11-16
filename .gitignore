@@ -19,4 +19,5 @@ node_modules
 # Environment variables
 .env*
 !.env.example
+projects.yaml
 config.yaml
