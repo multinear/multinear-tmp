@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 from typing import Dict, Any
 import yaml
+import random
 
 
 class ExperimentStatus:
@@ -69,6 +70,10 @@ def run_experiment(project_config: Dict[str, Any]):
             }
             
             try:
+                fail_simulate = config.get("meta", {}).get("fail_simulate", None)
+                if fail_simulate is not None and random.random() < fail_simulate:
+                    raise Exception("Simulated failure")
+
                 result = engine_module.run_single(**test)
                 results.append(result)
                 task_status_map[eval_id] = ExperimentStatus.COMPLETED
@@ -90,7 +95,7 @@ def run_experiment(project_config: Dict[str, Any]):
             eval_id = test.get("id", f"eval_{i}")
             if eval_id not in task_status_map:
                 task_status_map[eval_id] = ExperimentStatus.FAILED
-                
+
         yield {
             "status": ExperimentStatus.FAILED,
             "total": total_tasks,
