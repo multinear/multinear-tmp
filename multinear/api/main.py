@@ -261,4 +261,4 @@ async def get_recent_runs(
 app.include_router(api_router)
 
 # Serve frontend
-app.mount("/", StaticFiles(directory="frontend/build", html=True), name="frontend")
+app.mount("/", StaticFiles(directory=project_root / "frontend" / "build", html=True), name="frontend")
