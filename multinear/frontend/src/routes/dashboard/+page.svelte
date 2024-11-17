@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { page } from '$app/stores';
+    import { onMount } from 'svelte';
     import * as Card from "$lib/components/ui/card";
     import * as Table from "$lib/components/ui/table";
     import * as Alert from "$lib/components/ui/alert";
@@ -25,8 +25,20 @@
 
     import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
 
-    const projectId = $page.params.project_id;
-    
+    // Hash-based routing
+    let projectId: string = '';
+
+    function handleHashChange() {
+        const hash = window.location.hash;
+        projectId = hash ? hash.slice(1) : ''; // Remove the # from the hash
+    }
+
+    onMount(() => {
+        handleHashChange(); // Initial hash check
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    });
+
     $: currentProject = $projects.find(p => p.id === projectId);
 
     let searchTerm = "";
@@ -249,7 +261,7 @@
                     <Button 
                         variant="outline" 
                         class="border-yellow-200 text-yellow-800 hover:bg-yellow-100"
-                        on:click={() => window.history.back()}
+                        on:click={() => window.location.hash = ''}
                     >
                         Go Back
                     </Button>

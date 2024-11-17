@@ -5,7 +5,7 @@
     import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
 
     function handleProjectSelect(projectId: string) {
-        goto(`/${projectId}`);
+        goto(`/dashboard/#${projectId}`);
     }
 </script>
 
