@@ -10,19 +10,16 @@ def main():
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
     # Greet command
-    greet_parser = subparsers.add_parser('greet', help='Greet someone')
-    greet_parser.add_argument('name', type=str, help='Name of the person to greet')
+    greet_cmd = subparsers.add_parser('greet', help='Greet someone')
+    greet_cmd.add_argument('name', type=str, help='Name of the person to greet')
 
-    # Web command
-    web_parser = subparsers.add_parser('web', help='Start production web server')
-    web_parser.add_argument('--port', type=int, default=8000, help='Port to run the server on')
-    web_parser.add_argument('--host', type=str, default='127.0.0.1', help='Host to run the server on')
+    # Web commands
+    web_cmd = subparsers.add_parser('web', help='Start production web server')
+    web_dev_cmd = subparsers.add_parser('web_dev', help='Start development web server with auto-reload')
+    for cmd in [web_cmd, web_dev_cmd]:
+        cmd.add_argument('--port', type=int, default=8000, help='Port to run the server on')
+        cmd.add_argument('--host', type=str, default='127.0.0.1', help='Host to run the server on')
 
-    # Web dev command
-    web_dev_parser = subparsers.add_parser('web_dev', help='Start development web server with auto-reload')
-    web_dev_parser.add_argument('--port', type=int, default=8000, help='Port to run the server on')
-    web_dev_parser.add_argument('--host', type=str, default='127.0.0.1', help='Host to run the server on')
-    
     args = parser.parse_args()
     
     if args.command == 'greet':
