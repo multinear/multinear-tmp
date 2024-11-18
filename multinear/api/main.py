@@ -34,40 +34,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Get the path to projects.yaml
-current_file = Path(__file__)
-project_root = current_file.parent.parent
+# Get the current working directory and load multinear.yaml
+current_dir = Path.cwd()
+project_root = current_dir.parent
 
-# Read project configuration
-with open(project_root / "projects.yaml", "r") as f:
+# Read project configuration from local multinear.yaml
+with open(current_dir / "multinear.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-# Build projects dictionary with resolved paths
-projects = {}
-for project_id, project_data in config["projects"].items():
-    projects[project_id] = {
-        **project_data,
-        "folder": str(Path(project_data["folder"]).expanduser().resolve())
-    }
+# Create single project configuration
+project_id = config["project"]["id"]
+project_data = {
+    "id": project_id,
+    "name": config["project"]["name"],
+    "description": config["project"]["description"],
+    "folder": str(current_dir)
+}
 
-# Update projects in database on startup
+# Update project in database on startup
 with db_context() as db:
-    for project_id, project_data in config["projects"].items():
-        project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
-        if project:
-            # Update existing project details
-            project.name = project_data["name"]
-            project.description = project_data["description"]
-            project.folder = str(Path(project_data["folder"]).expanduser().resolve())
-        else:
-            # Add new project
-            project = ProjectModel(
-                id=project_id,
-                name=project_data["name"],
-                description=project_data["description"],
-                folder=str(Path(project_data["folder"]).expanduser().resolve())
-            )
-            db.add(project)
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if project:
+        # Update existing project details
+        project.name = project_data["name"]
+        project.description = project_data["description"]
+        project.folder = project_data["folder"]
+    else:
+        # Add new project
+        project = ProjectModel(
+            id=project_id,
+            name=project_data["name"],
+            description=project_data["description"],
+            folder=project_data["folder"]
+        )
+        db.add(project)
     db.commit()
 
 # Update background_job to persist job to DB
@@ -125,12 +125,12 @@ class RecentRun(BaseModel):
 api_router = APIRouter(prefix="/api")
 
 @api_router.get("/projects", response_model=List[Project])
-async def get_projects():
-    projects_list = [
-        Project(id=pid, name=pdata["name"], description=pdata["description"])
-        for pid, pdata in projects.items()
+async def get_projects(db: Session = Depends(get_db)):
+    projects = db.query(ProjectModel).all()
+    return [
+        Project(id=p.id, name=p.name, description=p.description)
+        for p in projects
     ]
-    return projects_list
 
 @api_router.post("/jobs/{project_id}", response_model=JobResponse)
 async def create_job(project_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -261,4 +261,5 @@ async def get_recent_runs(
 app.include_router(api_router)
 
 # Serve frontend
-app.mount("/", StaticFiles(directory=project_root / "frontend" / "build", html=True), name="frontend")
+frontend_path = Path(__file__).parent.parent / "frontend" / "build"
+app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

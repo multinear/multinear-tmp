@@ -1,8 +1,9 @@
 import argparse
-from .core import greet
 import uvicorn
+import pathlib
 
 from .api.main import app
+from .core import greet
 
 
 def main():
@@ -25,12 +26,23 @@ def main():
     if args.command == 'greet':
         print(greet(args.name))
     elif args.command in ['web', 'web_dev']:
-        uvicorn.run(
-            "multinear.api.main:app",
-            host=args.host,
-            port=args.port,
-            reload=(args.command == 'web_dev')
-        )
+        uvicorn_config = {
+            "app": "multinear.api.main:app",
+            "host": args.host,
+            "port": args.port,
+        }
+        
+        if args.command == 'web_dev':
+            # Add Multinear directory and current working directory to watch list
+            current_dir = pathlib.Path(__file__).parent
+            parent_dir = str(current_dir.parent)
+            cwd = str(pathlib.Path.cwd())
+            uvicorn_config.update({
+                "reload": True,
+                "reload_dirs": [parent_dir, cwd]
+            })
+        
+        uvicorn.run(**uvicorn_config)
     else:
         parser.print_help()
 
