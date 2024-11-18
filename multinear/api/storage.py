@@ -3,6 +3,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.types import JSON
 from datetime import datetime, timezone
 from contextlib import contextmanager
+from typing import Dict, Any, Optional, List
+import uuid
 
 
 Base = declarative_base()
@@ -16,6 +18,30 @@ class ProjectModel(Base):
     description = Column(String, nullable=True)
     folder = Column(String, nullable=False)
     jobs = relationship("JobModel", back_populates="project")
+
+    @classmethod
+    def list(cls) -> List["ProjectModel"]:
+        with db_context() as db:
+            return db.query(cls).all()
+
+    @classmethod
+    def find(cls, project_id: str) -> Optional["ProjectModel"]:
+        with db_context() as db:
+            return db.query(cls).filter(cls.id == project_id).first()
+
+    @classmethod
+    def save(cls, id: str, name: str, description: str, folder: str) -> "ProjectModel":
+        with db_context() as db:
+            project = db.query(cls).filter(cls.id == id).first()
+            if project:
+                project.name = name
+                project.description = description
+                project.folder = folder
+            else:
+                project = cls(id=id, name=name, description=description, folder=folder)
+                db.add(project)
+            db.commit()
+            return project
 
     def to_dict(self):
         # remove SQLAlchemy internal state
@@ -34,6 +60,60 @@ class JobModel(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     project = relationship("ProjectModel", back_populates="jobs")
     tasks = relationship("TaskModel", back_populates="job")
+
+    @classmethod
+    def start(cls, project_id: str) -> "JobModel":
+        job_id = str(uuid.uuid4())
+        with db_context() as db:
+            job = cls(id=job_id, project_id=project_id, status="started")
+            db.add(job)
+            db.commit()
+            return job
+
+    @classmethod
+    def find(cls, job_id: str) -> Optional["JobModel"]:
+        with db_context() as db:
+            return db.query(cls).filter(cls.id == job_id).first()
+
+    def update(self, status: str, total_tasks: int = 0, current_task: Optional[int] = None, details: dict = None):
+        with db_context() as db:
+            job = db.query(JobModel).filter(JobModel.id == self.id).one()
+            job.status = status
+            job.total_tasks = total_tasks
+            job.current_task = current_task
+            if details is not None:
+                job.details = details
+            db.commit()
+            # Update current instance
+            self.status = status
+            self.total_tasks = total_tasks
+            self.current_task = current_task
+            self.details = details
+
+    @classmethod
+    def list_recent(cls, project_id: str, limit: int = 5, offset: int = 0) -> List["JobModel"]:
+        with db_context() as db:
+            return (db.query(cls)
+                   .filter(cls.project_id == project_id)
+                   .order_by(cls.created_at.desc())
+                   .offset(offset)
+                   .limit(limit)
+                   .all())
+
+    @classmethod
+    def get_status(cls, project_id: str, job_id: str) -> Optional["JobModel"]:
+        """Get job status with project validation"""
+        with db_context() as db:
+            return (db.query(cls)
+                   .filter(cls.id == job_id, cls.project_id == project_id)
+                   .first())
+
+
+class TaskStatus:
+    STARTING = "starting"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class TaskModel(Base):
@@ -56,7 +136,7 @@ class TaskModel(Base):
                 id=task_id,
                 job_id=job_id,
                 task_number=task_number,
-                status="running"
+                status=TaskStatus.RUNNING
             )
             db.add(task)
             db.commit()
@@ -66,22 +146,22 @@ class TaskModel(Base):
         """Mark task as completed with results"""
         with db_context() as db:
             db_task = db.query(TaskModel).filter(TaskModel.id == self.id).one()
-            db_task.status = "completed"
+            db_task.status = TaskStatus.COMPLETED
             db_task.result = result
             db.commit()
             # Update current instance
-            self.status = "completed"
+            self.status = TaskStatus.COMPLETED
             self.result = result
 
     def fail(self, error: str):
         """Mark task as failed with error"""
         with db_context() as db:
             db_task = db.query(TaskModel).filter(TaskModel.id == self.id).one()
-            db_task.status = "failed"
+            db_task.status = TaskStatus.FAILED
             db_task.error = error
             db.commit()
             # Update current instance
-            self.status = "failed"
+            self.status = TaskStatus.FAILED
             self.error = error
 
     @classmethod
@@ -89,6 +169,13 @@ class TaskModel(Base):
         """List all tasks for a job"""
         with db_context() as db:
             return db.query(cls).filter(cls.job_id == job_id).all()
+
+    @classmethod
+    def get_status_map(cls, job_id: str) -> Dict[str, str]:
+        """Get status map for all tasks in a job"""
+        with db_context() as db:
+            tasks = db.query(cls).filter(cls.job_id == job_id).all()
+            return {task.id: task.status for task in tasks}
 
 
 # Global variable to store SessionLocal

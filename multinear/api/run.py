@@ -4,14 +4,7 @@ from typing import Dict, Any
 import yaml
 import random
 
-from .storage import TaskModel
-
-
-class ExperimentStatus:
-    STARTING = "starting"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
+from .storage import TaskModel, TaskStatus
 
 
 def run_experiment(project_config: Dict[str, Any], job_id: str):
@@ -54,10 +47,9 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
     # Run the experiment
     try:
         results = []
-        task_status_map = {}
         total_tasks = len(config["tasks"])
         
-        yield {"status": ExperimentStatus.STARTING, "total": total_tasks}
+        yield {"status": TaskStatus.STARTING, "total": total_tasks}
         
         for i, task in enumerate(config["tasks"]):
             task_id = task.get("id", f"task_{i}")
@@ -69,14 +61,12 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
                 job_id=job_id,
                 task_number=current_task
             )
-            task_status_map[task_id] = ExperimentStatus.RUNNING
             
             yield {
-                "status": ExperimentStatus.RUNNING,
+                "status": TaskStatus.RUNNING,
                 "current": current_task,
                 "total": total_tasks,
-                "details": f"Running task {current_task}/{total_tasks}",
-                "status_map": task_status_map
+                "details": f"Running task {current_task}/{total_tasks}"
             }
             
             try:
@@ -86,37 +76,25 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
 
                 result = task_runner_module.run_single(**task)
                 results.append(result)
-                task_status_map[task_id] = ExperimentStatus.COMPLETED
-                
                 task_model.complete(result=result)
                     
             except Exception as e:
                 error_msg = str(e)
                 print(f"Error running task {current_task}/{total_tasks}: {error_msg}")
                 results.append({"error": error_msg})
-                task_status_map[task_id] = ExperimentStatus.FAILED
-                
                 task_model.fail(error=error_msg)
         
         yield {
-            "status": ExperimentStatus.COMPLETED,
+            "status": TaskStatus.COMPLETED,
             "current": total_tasks,
             "total": total_tasks,
-            "results": results,
-            "status_map": task_status_map
+            "results": results
         }
 
     except Exception as e:
         print(f"Error running experiment: {e}")
-        # Update status map for any remaining tasks
-        for i, task in enumerate(config["tasks"]):
-            task_id = task.get("id", f"task_{i}")
-            if task_id not in task_status_map:
-                task_status_map[task_id] = ExperimentStatus.FAILED
-
         yield {
-            "status": ExperimentStatus.FAILED,
+            "status": TaskStatus.FAILED,
             "total": total_tasks,
-            "error": str(e),
-            "status_map": task_status_map
+            "error": str(e)
         }
