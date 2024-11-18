@@ -4,6 +4,11 @@
     import { goto } from '$app/navigation';
     import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
 
+    // If there is only one project, redirect to it
+    $: if (!$projectsLoading && !$projectsError && $projects.length === 1) {
+        handleProjectSelect($projects[0].id);
+    }
+
     function handleProjectSelect(projectId: string) {
         goto(`/dashboard/#${projectId}`);
     }
