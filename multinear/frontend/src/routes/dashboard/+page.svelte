@@ -511,7 +511,14 @@
                         <Table.Body>
                             {#each recentRuns as run}
                                 <Table.Row class="group">
-                                    <Table.Cell class="font-medium">{run.id}</Table.Cell>
+                                    <Table.Cell class="font-medium">
+                                        <Tooltip.Root>
+                                            <Tooltip.Trigger>{run.id.slice(-8)}</Tooltip.Trigger>
+                                            <Tooltip.Content>
+                                                <p>Run ID: {run.id}</p>
+                                            </Tooltip.Content>
+                                        </Tooltip.Root>
+                                    </Table.Cell>
                                     <Table.Cell>
                                         {new Date(run.date).toLocaleString(undefined, {
                                             dateStyle: 'medium',
