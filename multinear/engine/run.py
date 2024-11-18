@@ -9,7 +9,7 @@ from .storage import TaskModel, TaskStatus
 
 def run_experiment(project_config: Dict[str, Any], job_id: str):
     """
-    Run an experiment using the engine.run_single function from the project folder
+    Run an experiment using the task_runner.run_task function from the project folder
     
     Args:
         project_config: Project configuration dictionary containing folder path
@@ -40,9 +40,9 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
     task_runner_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(task_runner_module)
     
-    # Check if run_single exists in the module
-    if not hasattr(task_runner_module, "run_single"):
-        raise AttributeError(f"run_single function not found in {task_runner_path}")
+    # Check if run_task exists in the module
+    if not hasattr(task_runner_module, "run_task"):
+        raise AttributeError(f"run_task function not found in {task_runner_path}")
     
     # Run the experiment
     try:
@@ -72,7 +72,7 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
                 if fail_simulate is not None and random.random() < fail_simulate:
                     raise Exception("Simulated failure")
 
-                result = task_runner_module.run_single(**task)
+                result = task_runner_module.run_task(**task)
                 results.append(result)
                 TaskModel.complete(task_id, result=result)
                     
