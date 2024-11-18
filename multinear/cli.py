@@ -2,12 +2,11 @@ import argparse
 import uvicorn
 import pathlib
 from pathlib import Path
-import yaml
 from jinja2 import Template
 import re
 
-from .api.main import app
-from .core import greet
+
+MULTINEAR_CONFIG_DIR = '.multinear'
 
 def init_project():
     def slugify(text):
@@ -16,9 +15,9 @@ def init_project():
         return re.sub(r'[-\s]+', '-', text).strip().lower()
 
     # Check if .multinear already exists
-    multinear_dir = Path('.multinear')
+    multinear_dir = Path(MULTINEAR_CONFIG_DIR)
     if multinear_dir.exists():
-        print(".multinear directory already exists. Project appears to be already initialized.")
+        print(f"{MULTINEAR_CONFIG_DIR} directory already exists. Project appears to be already initialized.")
         return
         
     # Create .multinear directory
@@ -58,12 +57,8 @@ def main():
     # Init command
     init_cmd = subparsers.add_parser('init', help='Initialize a new Multinear project')
 
-    # Greet command
-    greet_cmd = subparsers.add_parser('greet', help='Greet someone')
-    greet_cmd.add_argument('name', type=str, help='Name of the person to greet')
-
     # Web commands
-    web_cmd = subparsers.add_parser('web', help='Start production web server')
+    web_cmd = subparsers.add_parser('web', help='Start platform web server')
     web_dev_cmd = subparsers.add_parser('web_dev', help='Start development web server with auto-reload')
     for cmd in [web_cmd, web_dev_cmd]:
         cmd.add_argument('--port', type=int, default=8000, help='Port to run the server on')
@@ -73,9 +68,12 @@ def main():
     
     if args.command == 'init':
         init_project()
-    elif args.command == 'greet':
-        print(greet(args.name))
     elif args.command in ['web', 'web_dev']:
+        # Check if .multinear directory exists
+        if not Path(MULTINEAR_CONFIG_DIR).exists():
+            print(f"Error: {MULTINEAR_CONFIG_DIR} directory not found. Please run 'multinear init' first.")
+            return
+        
         uvicorn_config = {
             "app": "multinear.api.main:app",
             "host": args.host,

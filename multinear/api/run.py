@@ -26,46 +26,46 @@ def run_experiment(project_config: Dict[str, Any]):
     project_folder = Path(project_config["folder"])
     
     # Load config.yaml from project folder
-    config_path = project_folder / "config.yaml"
+    config_path = project_folder / ".multinear" / "config.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found at {config_path}")
         
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+
+    # Construct path to task_runner.py
+    task_runner_path = project_folder / ".multinear" / "task_runner.py"
     
-    # Construct path to engine.py
-    engine_path = project_folder / "engine.py"
+    if not task_runner_path.exists():
+        raise FileNotFoundError(f"Task runner file not found at {task_runner_path}")
     
-    if not engine_path.exists():
-        raise FileNotFoundError(f"Engine file not found at {engine_path}")
-    
-    # Dynamically load the engine module
-    spec = importlib.util.spec_from_file_location("engine", engine_path)
-    engine_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(engine_module)
+    # Dynamically load the task runner module
+    spec = importlib.util.spec_from_file_location("task_runner", task_runner_path)
+    task_runner_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(task_runner_module)
     
     # Check if run_single exists in the module
-    if not hasattr(engine_module, "run_single"):
-        raise AttributeError(f"run_single function not found in {engine_path}")
+    if not hasattr(task_runner_module, "run_single"):
+        raise AttributeError(f"run_single function not found in {task_runner_path}")
     
     # Run the experiment
     try:
         results = []
-        task_status_map = {}  # Track status of each evaluation
-        total_tasks = len(config["evals"])
+        task_status_map = {}  # Track status of each task
+        total_tasks = len(config["tasks"])
         
         yield {"status": ExperimentStatus.STARTING, "total": total_tasks}
         
-        for i, test in enumerate(config["evals"]):
-            eval_id = test.get("id", f"eval_{i}")
-            task_status_map[eval_id] = ExperimentStatus.RUNNING
+        for i, task in enumerate(config["tasks"]):
+            task_id = task.get("id", f"task_{i}")
+            task_status_map[task_id] = ExperimentStatus.RUNNING
             current_task = i + 1
             
             yield {
                 "status": ExperimentStatus.RUNNING,
                 "current": current_task,
                 "total": total_tasks,
-                "details": f"Running eval {current_task}/{total_tasks}",
+                "details": f"Running task {current_task}/{total_tasks}",
                 "status_map": task_status_map
             }
             
@@ -74,12 +74,13 @@ def run_experiment(project_config: Dict[str, Any]):
                 if fail_simulate is not None and random.random() < fail_simulate:
                     raise Exception("Simulated failure")
 
-                result = engine_module.run_single(**test)
+                result = task_runner_module.run_single(**task)
                 results.append(result)
-                task_status_map[eval_id] = ExperimentStatus.COMPLETED
+                task_status_map[task_id] = ExperimentStatus.COMPLETED
             except Exception as e:
+                print(f"Error running task {current_task}/{total_tasks}: {e}")
                 results.append({"error": str(e)})
-                task_status_map[eval_id] = ExperimentStatus.FAILED
+                task_status_map[task_id] = ExperimentStatus.FAILED
         
         yield {
             "status": ExperimentStatus.COMPLETED,
@@ -90,11 +91,12 @@ def run_experiment(project_config: Dict[str, Any]):
         }
 
     except Exception as e:
-        # Update status map for any remaining evals
-        for i, test in enumerate(config["evals"]):
-            eval_id = test.get("id", f"eval_{i}")
-            if eval_id not in task_status_map:
-                task_status_map[eval_id] = ExperimentStatus.FAILED
+        print(f"Error running experiment: {e}")
+        # Update status map for any remaining tasks
+        for i, task in enumerate(config["tasks"]):
+            task_id = task.get("id", f"task_{i}")
+            if task_id not in task_status_map:
+                task_status_map[task_id] = ExperimentStatus.FAILED
 
         yield {
             "status": ExperimentStatus.FAILED,

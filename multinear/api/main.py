@@ -86,6 +86,7 @@ def background_job(project_id: str, job_id: str):
                 job.details = update
                 db.commit()
         except Exception as e:
+            print(f"Error running experiment: {e}")
             db.rollback()
             # Update job status in DB
             job = db.query(JobModel).filter(JobModel.id == job_id).one()
