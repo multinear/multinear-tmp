@@ -33,6 +33,62 @@ class JobModel(Base):
     details = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     project = relationship("ProjectModel", back_populates="jobs")
+    tasks = relationship("TaskModel", back_populates="job")
+
+
+class TaskModel(Base):
+    __tablename__ = "tasks"
+    
+    id = Column(String, primary_key=True, index=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
+    task_number = Column(Integer, nullable=False)
+    status = Column(String, nullable=False)
+    result = Column(JSON, nullable=True)
+    error = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    job = relationship("JobModel", back_populates="tasks")
+
+    @classmethod
+    def start(cls, task_id: str, job_id: str, task_number: int):
+        """Start a new task"""
+        with db_context() as db:
+            task = cls(
+                id=task_id,
+                job_id=job_id,
+                task_number=task_number,
+                status="running"
+            )
+            db.add(task)
+            db.commit()
+            return task
+
+    def complete(self, result: dict):
+        """Mark task as completed with results"""
+        with db_context() as db:
+            db_task = db.query(TaskModel).filter(TaskModel.id == self.id).one()
+            db_task.status = "completed"
+            db_task.result = result
+            db.commit()
+            # Update current instance
+            self.status = "completed"
+            self.result = result
+
+    def fail(self, error: str):
+        """Mark task as failed with error"""
+        with db_context() as db:
+            db_task = db.query(TaskModel).filter(TaskModel.id == self.id).one()
+            db_task.status = "failed"
+            db_task.error = error
+            db.commit()
+            # Update current instance
+            self.status = "failed"
+            self.error = error
+
+    @classmethod
+    def list(cls, job_id: str):
+        """List all tasks for a job"""
+        with db_context() as db:
+            return db.query(cls).filter(cls.job_id == job_id).all()
 
 
 # Global variable to store SessionLocal

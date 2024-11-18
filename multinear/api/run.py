@@ -4,6 +4,8 @@ from typing import Dict, Any
 import yaml
 import random
 
+from .storage import TaskModel
+
 
 class ExperimentStatus:
     STARTING = "starting"
@@ -12,12 +14,13 @@ class ExperimentStatus:
     FAILED = "failed"
 
 
-def run_experiment(project_config: Dict[str, Any]):
+def run_experiment(project_config: Dict[str, Any], job_id: str):
     """
     Run an experiment using the engine.run_single function from the project folder
     
     Args:
         project_config: Project configuration dictionary containing folder path
+        job_id: ID of the job being run
     
     Yields:
         Dict containing status updates, final results, and status map
@@ -51,15 +54,22 @@ def run_experiment(project_config: Dict[str, Any]):
     # Run the experiment
     try:
         results = []
-        task_status_map = {}  # Track status of each task
+        task_status_map = {}
         total_tasks = len(config["tasks"])
         
         yield {"status": ExperimentStatus.STARTING, "total": total_tasks}
         
         for i, task in enumerate(config["tasks"]):
             task_id = task.get("id", f"task_{i}")
-            task_status_map[task_id] = ExperimentStatus.RUNNING
             current_task = i + 1
+            
+            # Start new task
+            task_model = TaskModel.start(
+                task_id=task_id,
+                job_id=job_id,
+                task_number=current_task
+            )
+            task_status_map[task_id] = ExperimentStatus.RUNNING
             
             yield {
                 "status": ExperimentStatus.RUNNING,
@@ -77,10 +87,16 @@ def run_experiment(project_config: Dict[str, Any]):
                 result = task_runner_module.run_single(**task)
                 results.append(result)
                 task_status_map[task_id] = ExperimentStatus.COMPLETED
+                
+                task_model.complete(result=result)
+                    
             except Exception as e:
-                print(f"Error running task {current_task}/{total_tasks}: {e}")
-                results.append({"error": str(e)})
+                error_msg = str(e)
+                print(f"Error running task {current_task}/{total_tasks}: {error_msg}")
+                results.append({"error": error_msg})
                 task_status_map[task_id] = ExperimentStatus.FAILED
+                
+                task_model.fail(error=error_msg)
         
         yield {
             "status": ExperimentStatus.COMPLETED,

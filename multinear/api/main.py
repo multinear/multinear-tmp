@@ -78,7 +78,7 @@ def background_job(project_id: str, job_id: str):
             project = db.query(ProjectModel).filter(ProjectModel.id == project_id).one()
             job = db.query(JobModel).filter(JobModel.id == job_id).one()  # Get existing job
             
-            for update in run_experiment(project.to_dict()):
+            for update in run_experiment(project.to_dict(), job_id):
                 # Update job status in DB
                 job.status = update["status"]
                 job.total_tasks = update.get("total", 0)
