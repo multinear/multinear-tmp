@@ -62,13 +62,14 @@ class JobModel(Base):
     tasks = relationship("TaskModel", back_populates="job")
 
     @classmethod
-    def start(cls, project_id: str) -> "JobModel":
+    def start(cls, project_id: str) -> str:
+        """Start a new job and return its ID"""
         job_id = str(uuid.uuid4())
         with db_context() as db:
             job = cls(id=job_id, project_id=project_id, status="started")
             db.add(job)
             db.commit()
-            return job
+            return job_id
 
     @classmethod
     def find(cls, job_id: str) -> Optional["JobModel"]:
@@ -129,8 +130,9 @@ class TaskModel(Base):
     job = relationship("JobModel", back_populates="tasks")
 
     @classmethod
-    def start(cls, task_id: str, job_id: str, task_number: int):
-        """Start a new task"""
+    def start(cls, job_id: str, task_number: int) -> str:
+        """Start a new task and return its ID"""
+        task_id = str(uuid.uuid4())
         with db_context() as db:
             task = cls(
                 id=task_id,
@@ -140,29 +142,25 @@ class TaskModel(Base):
             )
             db.add(task)
             db.commit()
-            return task
+            return task_id
 
-    def complete(self, result: dict):
+    @classmethod
+    def complete(cls, task_id: str, result: dict):
         """Mark task as completed with results"""
         with db_context() as db:
-            db_task = db.query(TaskModel).filter(TaskModel.id == self.id).one()
-            db_task.status = TaskStatus.COMPLETED
-            db_task.result = result
+            task = db.query(cls).filter(cls.id == task_id).one()
+            task.status = TaskStatus.COMPLETED
+            task.result = result
             db.commit()
-            # Update current instance
-            self.status = TaskStatus.COMPLETED
-            self.result = result
 
-    def fail(self, error: str):
+    @classmethod
+    def fail(cls, task_id: str, error: str):
         """Mark task as failed with error"""
         with db_context() as db:
-            db_task = db.query(TaskModel).filter(TaskModel.id == self.id).one()
-            db_task.status = TaskStatus.FAILED
-            db_task.error = error
+            task = db.query(cls).filter(cls.id == task_id).one()
+            task.status = TaskStatus.FAILED
+            task.error = error
             db.commit()
-            # Update current instance
-            self.status = TaskStatus.FAILED
-            self.error = error
 
     @classmethod
     def list(cls, job_id: str):

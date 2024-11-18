@@ -99,12 +99,12 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
     
-    job = JobModel.start(project_id)
-    background_tasks.add_task(background_job, project_id, job.id)
+    job_id = JobModel.start(project_id)
+    background_tasks.add_task(background_job, project_id, job_id)
     
     return JobResponse(
         project_id=project_id,
-        job_id=job.id,
+        job_id=job_id,
         status="started",
         total_tasks=0,
         task_status_map={},

@@ -52,12 +52,10 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
         yield {"status": TaskStatus.STARTING, "total": total_tasks}
         
         for i, task in enumerate(config["tasks"]):
-            task_id = task.get("id", f"task_{i}")
             current_task = i + 1
             
             # Start new task
-            task_model = TaskModel.start(
-                task_id=task_id,
+            task_id = TaskModel.start(
                 job_id=job_id,
                 task_number=current_task
             )
@@ -76,13 +74,13 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
 
                 result = task_runner_module.run_single(**task)
                 results.append(result)
-                task_model.complete(result=result)
+                TaskModel.complete(task_id, result=result)
                     
             except Exception as e:
                 error_msg = str(e)
                 print(f"Error running task {current_task}/{total_tasks}: {error_msg}")
                 results.append({"error": error_msg})
-                task_model.fail(error=error_msg)
+                TaskModel.fail(task_id, error=error_msg)
         
         yield {
             "status": TaskStatus.COMPLETED,
