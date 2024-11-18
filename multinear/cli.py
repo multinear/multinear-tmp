@@ -39,7 +39,8 @@ def main():
             cwd = str(pathlib.Path.cwd())
             uvicorn_config.update({
                 "reload": True,
-                "reload_dirs": [parent_dir, cwd]
+                "reload_dirs": [parent_dir, cwd],
+                "reload_includes": ["*.py", "*.yaml"]
             })
         
         uvicorn.run(**uvicorn_config)
