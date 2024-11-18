@@ -39,7 +39,7 @@ current_dir = Path.cwd()
 project_root = current_dir.parent
 
 # Read project configuration from local multinear.yaml
-with open(current_dir / "multinear.yaml", "r") as f:
+with open(current_dir / ".multinear" / "config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 # Create single project configuration

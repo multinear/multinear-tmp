@@ -40,7 +40,7 @@ _SessionLocal = None
 
 # Initialize SQLAlchemy
 def init_db():
-    DATABASE_URL = "sqlite:///./multinear.db"
+    DATABASE_URL = "sqlite:///./.multinear/multinear.db"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
     global _SessionLocal
     _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -1,14 +1,62 @@
 import argparse
 import uvicorn
 import pathlib
+from pathlib import Path
+import yaml
+from jinja2 import Template
+import re
 
 from .api.main import app
 from .core import greet
 
+def init_project():
+    def slugify(text):
+        # Remove special chars, replace spaces with hyphens, convert to lowercase
+        text = re.sub(r'[^\w\s-]', '', text)
+        return re.sub(r'[-\s]+', '-', text).strip().lower()
+
+    # Check if .multinear already exists
+    multinear_dir = Path('.multinear')
+    if multinear_dir.exists():
+        print(".multinear directory already exists. Project appears to be already initialized.")
+        return
+        
+    # Create .multinear directory
+    multinear_dir.mkdir()
+    
+    # Get project details from user
+    project_name = input("Project name: ").strip()
+    default_id = slugify(project_name)
+    project_id = input(f"Project ID [{default_id}]: ").strip() or default_id
+    description = input("Project description: ").strip()
+    
+    # Read template
+    template_path = Path(__file__).parent / 'templates' / 'config.yaml'
+    with open(template_path, 'r') as f:
+        template_content = f.read()
+    
+    # Replace template variables
+    template = Template(template_content)
+    config_content = template.render(
+        project_name=project_name,
+        project_id=project_id,
+        description=description
+    )
+    
+    # Write config file
+    config_path = multinear_dir / 'config.yaml'
+    with open(config_path, 'w') as f:
+        f.write(config_content)
+    
+    print(f"\nProject initialized successfully in {multinear_dir}")
+    print("You can now run 'multinear web' to start the server")
 
 def main():
     parser = argparse.ArgumentParser(description="Multinear CLI tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Init command
+    init_cmd = subparsers.add_parser('init', help='Initialize a new Multinear project')
 
     # Greet command
     greet_cmd = subparsers.add_parser('greet', help='Greet someone')
@@ -23,7 +71,9 @@ def main():
 
     args = parser.parse_args()
     
-    if args.command == 'greet':
+    if args.command == 'init':
+        init_project()
+    elif args.command == 'greet':
         print(greet(args.name))
     elif args.command in ['web', 'web_dev']:
         uvicorn_config = {
