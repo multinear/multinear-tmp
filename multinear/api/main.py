@@ -1,15 +1,15 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, APIRouter, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 import yaml
-from typing import Optional, Dict, List
+from typing import List
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 import random
 
-from .run import run_experiment
-from .storage import init_db, ProjectModel, JobModel, TaskModel, TaskStatus
+from .schemas import Project, JobResponse, RecentRun
+from ..engine.run import run_experiment
+from ..engine.storage import init_db, ProjectModel, JobModel, TaskModel, TaskStatus
 
 
 init_db()
@@ -83,33 +83,6 @@ def background_job(project_id: str, job_id: str):
             }
         )
 
-# Schemas
-class Project(BaseModel):
-    id: str
-    name: str
-    description: str
-
-class JobResponse(BaseModel):
-    project_id: str
-    job_id: str
-    status: str
-    total_tasks: int
-    current_task: Optional[int] = None
-    task_status_map: Optional[Dict] = None
-    details: Optional[Dict] = None
-
-class RecentRun(BaseModel):
-    id: str
-    date: str
-    revision: str
-    model: str
-    score: float
-    totalTests: int
-    pass_: int = Field(alias='pass')  # 'pass' is a Python keyword
-    fail: int
-    regression: int
-    bookmarked: Optional[bool] = False
-    noted: Optional[bool] = False
 
 # Create API router
 api_router = APIRouter(prefix="/api")
@@ -158,7 +131,7 @@ async def get_job_status(project_id: str, job_id: str):
         details=details
     )
 
-def generate_fake_run(job_id: str, job_data: dict, created_at: datetime) -> dict:
+def _generate_fake_run(job_id: str, job_data: dict, created_at: datetime) -> dict:
     total = random.randint(450, 550)
     passed = int(total * random.uniform(0.75, 0.95))
     failed = int(total * random.uniform(0.03, 0.15))
@@ -192,7 +165,6 @@ def generate_fake_run(job_id: str, job_data: dict, created_at: datetime) -> dict
     return {
         "id": job_id,
         "date": created_at.replace(tzinfo=timezone.utc).isoformat(),
-        # "date": created_at.replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %H:%M %Z"),
         "revision": job_data.get("revision", hex(random.randint(0, 16**8))[2:].zfill(8)),
         "model": job_data.get("model", random.choice(models)),
         "score": score,
@@ -218,13 +190,13 @@ async def get_recent_runs(
     runs = []
     for job in recent_jobs:
         job_data = job.details or {}
-        run = generate_fake_run(job.id, job_data, job.created_at)
+        run = _generate_fake_run(job.id, job_data, job.created_at)
         runs.append(run)
     
     # If we have fewer than 5 runs from real data, add some fake ones
     while len(runs) < 5:
         fake_id = f"RUN-{str(len(runs) + 1).zfill(3)}"
-        runs.append(generate_fake_run(fake_id, {}, len(runs)))
+        runs.append(_generate_fake_run(fake_id, {}, len(runs)))
     
     return runs
 
