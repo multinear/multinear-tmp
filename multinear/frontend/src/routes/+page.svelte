@@ -51,7 +51,7 @@
                         >
                             <Card.Header>
                                 <Card.Title>{project.name}</Card.Title>
-                                <Card.Description>{project.description}</Card.Description>
+                                <Card.Description class="pb-4">{project.description}</Card.Description>
                             </Card.Header>
                         </button>
                     </Card.Root>

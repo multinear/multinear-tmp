@@ -40,8 +40,10 @@
 			<!-- Left side: Logo and Links -->
 			<!-- space-x-4 -->
 			<div class="flex items-center">
-				<img src={logo} alt="Logo" class="h-8 w-10 mr-4" />
-				<div class="text-lg text-white font-bold pr-8">Multinear</div>
+				<a href="/" class="flex items-center">
+					<img src={logo} alt="Logo" class="h-8 w-10 mr-4" />
+					<div class="text-lg text-white font-bold pr-8">Multinear</div>
+				</a>
 				{#each navLinks as link}
 					<NavLink href={link.href} label={link.label} />
 				{/each}
