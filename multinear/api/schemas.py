@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 
 class Project(BaseModel):
@@ -7,7 +7,7 @@ class Project(BaseModel):
     name: str
     description: str
 
-class JobResponse(BaseModel):
+class JobDetails(BaseModel):
     project_id: str
     job_id: str
     status: str
@@ -28,3 +28,17 @@ class RecentRun(BaseModel):
     regression: int
     bookmarked: Optional[bool] = False
     noted: Optional[bool] = False
+
+class TaskDetails(BaseModel):
+    id: str
+    status: str
+    result: Optional[Dict] = None
+    error: Optional[str] = None
+
+class FullRunDetails(BaseModel):
+    id: str
+    project: Project
+    details: Dict
+    date: str
+    status: str
+    tasks: List[TaskDetails]

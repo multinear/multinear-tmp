@@ -73,8 +73,7 @@ export async function getRecentRuns(projectId: string, limit: number = 5, offset
 }
 
 export async function getRunDetails(runId: string): Promise<any> {
-    return {};
-    const response = await fetch(`${API_URL}/runs/${runId}`);
+    const response = await fetch(`${API_URL}/run-details/${runId}`);
     if (!response.ok) {
         throw new Error(`Failed to fetch run details: ${response.statusText}`);
     }

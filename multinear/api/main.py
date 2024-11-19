@@ -7,7 +7,7 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 import random
 
-from .schemas import Project, JobResponse, RecentRun
+from .schemas import Project, JobDetails, RecentRun, FullRunDetails, TaskDetails
 from ..engine.run import run_experiment
 from ..engine.storage import init_db, ProjectModel, JobModel, TaskModel, TaskStatus
 
@@ -94,7 +94,7 @@ async def get_projects():
         for p in ProjectModel.list()
     ]
 
-@api_router.post("/jobs/{project_id}", response_model=JobResponse)
+@api_router.post("/jobs/{project_id}", response_model=JobDetails)
 async def create_job(project_id: str, background_tasks: BackgroundTasks):
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
@@ -102,7 +102,7 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
     job_id = JobModel.start(project_id)
     background_tasks.add_task(background_job, project_id, job_id)
     
-    return JobResponse(
+    return JobDetails(
         project_id=project_id,
         job_id=job_id,
         status="started",
@@ -111,7 +111,7 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
         details={}
     )
 
-@api_router.get("/jobs/{project_id}/{job_id}/status", response_model=JobResponse)
+@api_router.get("/jobs/{project_id}/{job_id}/status", response_model=JobDetails)
 async def get_job_status(project_id: str, job_id: str):
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
@@ -121,7 +121,7 @@ async def get_job_status(project_id: str, job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     
     details = job.details or {}
-    return JobResponse(
+    return JobDetails(
         project_id=project_id,
         job_id=job_id,
         status=job.status,
@@ -199,6 +199,42 @@ async def get_recent_runs(
         runs.append(_generate_fake_run(fake_id, {}, len(runs)))
     
     return runs
+
+@api_router.get("/run-details/{run_id}", response_model=FullRunDetails)
+async def get_run_details(run_id: str):
+    job = JobModel.find(run_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Run not found")
+    
+    # Get project details
+    project = ProjectModel.find(job.project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Get all tasks for this job
+    tasks = TaskModel.list(run_id)
+    task_details = [
+        TaskDetails(
+            id=task.id,
+            status=task.status,
+            result={"output": task.result} if type(task.result) == str else task.result,
+            error=task.error
+        ) for task in tasks
+    ]
+    
+    # Create the full run details response
+    return FullRunDetails(
+        id=run_id,
+        project=Project(
+            id=project.id,
+            name=project.name,
+            description=project.description
+        ),
+        details=job.details or {},
+        date=job.created_at.replace(tzinfo=timezone.utc).isoformat(),
+        status=job.status,
+        tasks=task_details
+    )
 
 # Include API router
 app.include_router(api_router)
