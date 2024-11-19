@@ -22,6 +22,7 @@
     export let runsList: RecentRun[];
     export let isLoading: boolean;
     export let loadingError: string | null;
+    export let showFilters: boolean = false;
     export let showViewAll: boolean = false;
 
     $: modelVersions = ["", ...new Set(runsList.map(run => run.model))];
@@ -92,145 +93,149 @@
 </script>
 
 <!-- Filters and Controls -->
-<Card.Root>
-    <Card.Header>
-        <Card.Title>Filters and Controls</Card.Title>
-    </Card.Header>
-    <Card.Content class="flex flex-wrap gap-4">
-        <!-- Date Range Filter -->
-        <div class="flex flex-col space-y-1.5">
-            <Label for="date-range">Date Range</Label>
-            <Select.Root
-                selected={selectedDateRange}
-                onSelectedChange={(v) => { 
-                    if (v) selectedDateRange = {value: v.value, label: v.label!};
-                    else selectedDateRange = undefined;
-                }}
-            >
-                <Select.Trigger class="w-[180px]" id="date-range">
-                    <Select.Value placeholder="Select date range" />
-                </Select.Trigger>
-                <Select.Content>
-                    <Select.Group>
-                        {#each dateRanges as range}
-                            <Select.Item 
-                                value={range.toLowerCase()} 
-                                label={range}
-                                class="min-h-[32px]"
-                            >
-                                {range}
-                            </Select.Item>
-                        {/each}
-                    </Select.Group>
-                </Select.Content>
-            </Select.Root>
-        </div>
-        
-        <!-- Model Version Filter -->
-        <div class="flex flex-col space-y-1.5">
-            <Label for="model-version">Model Version</Label>
-            <Select.Root
-                selected={selectedModelVersion}
-                onSelectedChange={(v) => { 
-                    if (v) selectedModelVersion = {value: v.value, label: v.label!};
-                    else selectedModelVersion = undefined;
-                }}
-            >
-                <Select.Trigger class="w-[180px]" id="model-version">
-                    <Select.Value placeholder="Select model version" />
-                </Select.Trigger>
-                <Select.Content>
-                    <Select.Group>
-                        {#each modelVersions as version}
-                            <Select.Item 
-                                value={version} 
-                                label={version}
-                                class="min-h-[32px]"
-                            >
-                                {version}
-                            </Select.Item>
-                        {/each}
-                    </Select.Group>
-                </Select.Content>
-            </Select.Root>
-        </div>
-        
-        <!-- Code Revision Filter -->
-        <div class="flex flex-col space-y-1.5">
-            <Label for="code-revision">Code Revision</Label>
-            <Select.Root
-                selected={selectedCodeRevision}
-                onSelectedChange={(v) => { 
-                    if (v) selectedCodeRevision = {value: v.value, label: v.label!};
-                    else selectedCodeRevision = undefined;
-                }}
-            >
-                <Select.Trigger class="w-[180px]" id="code-revision">
-                    <Select.Value placeholder="Select code revision" />
-                </Select.Trigger>
-                <Select.Content>
-                    <Select.Group>
-                        {#each codeRevisions as revision}
-                            <Select.Item 
-                                value={revision} 
-                                label={revision}
-                                class="min-h-[32px]"
-                            >
-                                {revision}
-                            </Select.Item>
-                        {/each}
-                    </Select.Group>
-                </Select.Content>
-            </Select.Root>
-        </div>
-        
-        <!-- Test Group Filter -->
-        <div class="flex flex-col space-y-1.5">
-            <Label for="test-group">Test Group</Label>
-            <Select.Root
-                selected={selectedTestGroup}
-                onSelectedChange={(v) => { 
-                    if (v) selectedTestGroup = {value: v.value, label: v.label!};
-                    else selectedTestGroup = undefined;
-                }}
-            >
-                <Select.Trigger class="w-[180px]" id="test-group">
-                    <Select.Value placeholder="Select test group" />
-                </Select.Trigger>
-                <Select.Content>
-                    <Select.Group>
-                        {#each testGroups as group}
-                            <Select.Item 
-                                value={group.toLowerCase().replace(' ', '-')}
-                                label={group}
-                                class="min-h-[32px]"
-                            >
-                                {group}
-                            </Select.Item>
-                        {/each}
-                    </Select.Group>
-                </Select.Content>
-            </Select.Root>
-        </div>
-        
-        <!-- Search Input -->
-        <div class="flex flex-col space-y-1.5 flex-grow">
-            <Label for="search">Search</Label>
-            <Input
-                id="search"
-                placeholder="Search by Run ID, name, or metadata"
-                bind:value={searchTerm}
-            />
-        </div>
-    </Card.Content>
-</Card.Root>
+{#if showFilters}
+    <Card.Root>
+        <Card.Header>
+            <Card.Title>Filters and Search</Card.Title>
+        </Card.Header>
+        <Card.Content class="flex flex-wrap gap-4">
+            <!-- Date Range Filter -->
+            <div class="flex flex-col space-y-1.5">
+                <Label for="date-range">Date Range</Label>
+                <Select.Root
+                    selected={selectedDateRange}
+                    onSelectedChange={(v) => { 
+                        if (v) selectedDateRange = {value: v.value, label: v.label!};
+                        else selectedDateRange = { value: '', label: ''};
+                    }}
+                >
+                    <Select.Trigger class="w-[180px]" id="date-range">
+                        <Select.Value placeholder="Select date range" />
+                    </Select.Trigger>
+                    <Select.Content>
+                        <Select.Group>
+                            {#each dateRanges as range}
+                                <Select.Item 
+                                    value={range.toLowerCase()} 
+                                    label={range}
+                                    class="min-h-[32px]"
+                                >
+                                    {range}
+                                </Select.Item>
+                            {/each}
+                        </Select.Group>
+                    </Select.Content>
+                </Select.Root>
+            </div>
+            
+            <!-- Model Version Filter -->
+            <div class="flex flex-col space-y-1.5">
+                <Label for="model-version">Model Version</Label>
+                <Select.Root
+                    selected={selectedModelVersion}
+                    onSelectedChange={(v) => { 
+                        if (v) selectedModelVersion = {value: v.value, label: v.label!};
+                        else selectedModelVersion = { value: '', label: ''};
+                    }}
+                >
+                    <Select.Trigger class="w-[180px]" id="model-version">
+                        <Select.Value placeholder="Select model version" />
+                    </Select.Trigger>
+                    <Select.Content>
+                        <Select.Group>
+                            {#each modelVersions as version}
+                                <Select.Item 
+                                    value={version} 
+                                    label={version}
+                                    class="min-h-[32px]"
+                                >
+                                    {version}
+                                </Select.Item>
+                            {/each}
+                        </Select.Group>
+                    </Select.Content>
+                </Select.Root>
+            </div>
+            
+            <!-- Code Revision Filter -->
+            <div class="flex flex-col space-y-1.5">
+                <Label for="code-revision">Code Revision</Label>
+                <Select.Root
+                    selected={selectedCodeRevision}
+                    onSelectedChange={(v) => { 
+                        if (v) selectedCodeRevision = {value: v.value, label: v.label!};
+                        else selectedCodeRevision = { value: '', label: ''};
+                    }}
+                >
+                    <Select.Trigger class="w-[180px]" id="code-revision">
+                        <Select.Value placeholder="Select code revision" />
+                    </Select.Trigger>
+                    <Select.Content>
+                        <Select.Group>
+                            {#each codeRevisions as revision}
+                                <Select.Item 
+                                    value={revision} 
+                                    label={revision}
+                                    class="min-h-[32px]"
+                                >
+                                    {revision}
+                                </Select.Item>
+                            {/each}
+                        </Select.Group>
+                    </Select.Content>
+                </Select.Root>
+            </div>
+            
+            <!-- Test Group Filter -->
+            <div class="flex flex-col space-y-1.5">
+                <Label for="test-group">Test Group</Label>
+                <Select.Root
+                    selected={selectedTestGroup}
+                    onSelectedChange={(v) => { 
+                        if (v) selectedTestGroup = {value: v.value, label: v.label!};
+                        else selectedTestGroup = { value: '', label: ''};
+                    }}
+                >
+                    <Select.Trigger class="w-[180px]" id="test-group">
+                        <Select.Value placeholder="Select test group" />
+                    </Select.Trigger>
+                    <Select.Content>
+                        <Select.Group>
+                            {#each testGroups as group}
+                                <Select.Item 
+                                    value={group.toLowerCase().replace(' ', '-')}
+                                    label={group}
+                                    class="min-h-[32px]"
+                                >
+                                    {group}
+                                </Select.Item>
+                            {/each}
+                        </Select.Group>
+                    </Select.Content>
+                </Select.Root>
+            </div>
+            
+            <!-- Search Input -->
+            <div class="flex flex-col space-y-1.5 flex-grow">
+                <Label for="search">Search</Label>
+                <Input
+                    id="search"
+                    placeholder="Search by Run ID, name, or metadata"
+                    bind:value={searchTerm}
+                />
+            </div>
+        </Card.Content>
+    </Card.Root>
+{/if}
 
 <!-- Recent Runs -->
 <Card.Root>
-    <Card.Header>
-        <Card.Title>Recent Runs</Card.Title>
-        <Card.Description>Latest experiment runs and their status</Card.Description>
-    </Card.Header>
+    {#if showViewAll}
+        <Card.Header>
+            <Card.Title>Recent Experiments</Card.Title>
+            <Card.Description>Latest experiment runs and their status</Card.Description>
+        </Card.Header>
+    {/if}
     <Card.Content>
         {#if isLoading}
             <div class="flex items-center justify-center py-8 text-gray-500">

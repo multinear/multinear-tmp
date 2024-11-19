@@ -44,6 +44,7 @@
             isLoading={loading}
             loadingError={error}
             showViewAll={false}
+            showFilters={true}
         />
 
 
