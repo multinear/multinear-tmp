@@ -93,6 +93,6 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
         print(f"Error running experiment: {e}")
         yield {
             "status": TaskStatus.FAILED,
-            "total": total_tasks,
+            "total": 0,
             "error": str(e)
         }
