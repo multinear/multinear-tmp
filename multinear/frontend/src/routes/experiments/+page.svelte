@@ -5,6 +5,7 @@
     import { getRecentRuns } from '$lib/api';
     import type { RecentRun } from '$lib/api';
     import { selectedProjectId } from '$lib/stores/projects';
+    import RunsWithFilters from '$lib/components/RunsWithFilters.svelte';
 
 
     let runs: RecentRun[] = [];
@@ -34,34 +35,21 @@
     }
 </script>
 
-<div class="container mx-auto p-4">
+<div class="container mx-auto p-4 space-y-6">
     <h1 class="text-4xl font-bold mb-8">Experiments</h1>
 
-    {#if loading}
-        <div class="text-center text-gray-500">Loading experiments...</div>
-    {:else if error}
-        <Card.Root class="border-red-200 bg-red-50">
-            <Card.Header>
-                <Card.Title class="text-red-800">Error</Card.Title>
-                <Card.Description class="text-red-600">
-                    {error}
-                </Card.Description>
-            </Card.Header>
-            <Card.Footer class="flex justify-end">
-                <Button 
-                    variant="outline" 
-                    class="border-red-200 text-red-800 hover:bg-red-100"
-                    on:click={() => window.location.reload()}
-                >
-                    Try Again
-                </Button>
-            </Card.Footer>
-        </Card.Root>
-    {:else if runs.length === 0}
-        <div class="text-center text-gray-500">No experiments found</div>
-    {:else}
-        <div class="grid gap-4">
-            {#each runs as run (run.id)}
+        <!-- List of Runs Component -->
+        <RunsWithFilters
+            runsList={runs}
+            isLoading={loading}
+            loadingError={error}
+            showViewAll={false}
+        />
+
+
+
+        <div class="grid gap-4 pt-8">
+            {#each runs.slice(0, 2) as run (run.id)}
                 <Card.Root class="hover:bg-gray-50 transition-colors">
                     <button
                         class="w-full text-left"
@@ -89,5 +77,5 @@
                 </Card.Root>
             {/each}
         </div>
-    {/if}
+
 </div>
