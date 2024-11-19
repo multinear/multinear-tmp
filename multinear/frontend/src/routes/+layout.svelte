@@ -9,43 +9,57 @@
 	import { getProjects } from '$lib/api';
 	import { projects, projectsLoading, projectsError, selectedProjectId } from '$lib/stores/projects';
 	import { page } from '$app/stores';
+	import { setupHashChangeHandler } from '$lib/stores/projects';
+	import { afterNavigate } from '$app/navigation';
 
 	let { children } = $props();
 
 	const baseNavLinks = [
 		{ href: '/', label: 'Home' },
-		// { href: '/experiments', label: 'Experiments' }
 	];
 
-	// Dynamically add Run link if we're on a run page
-	const navLinks = $derived(() => {
+	// Dynamically add links based on the current page
+	const navLinks = $derived.by(() => {
 		const pathname = $page.url.pathname;
-		if (pathname.startsWith('/run')) {
-			return [...baseNavLinks, { href: pathname + $page.url.hash, label: 'Run' }];
-		}
-		// if (pathname.startsWith('/experiments')) {
-		// 	return [...baseNavLinks, { href: pathname + $page.url.hash, label: 'Experiments' }];
-		// }
+		let links = [...baseNavLinks];
 		if ($selectedProjectId) {
-			return [...baseNavLinks, { href: `/experiments#${$selectedProjectId}`, label: 'Experiments' }];
+			links.push({ href: `/experiments#${$selectedProjectId}`, label: 'Experiments' });
 		}
-		return baseNavLinks;
+		if (pathname.startsWith('/run')) {
+			links.push({ href: pathname + $page.url.hash, label: 'Run' });
+		}		
+		return links;
 	});
 
-	onMount(async () => {
-		try {
-			const response = await getProjects();
-			if (!response) {
-				projectsError.set("Invalid response from server");
-				return;
+	onMount(() => {
+		const { cleanup: hashCleanup } = setupHashChangeHandler();
+		
+		// Re-run hash handler after navigation
+		afterNavigate(() => {
+			setupHashChangeHandler();
+		});
+
+		const loadProjects = async () => {
+			try {
+				const response = await getProjects();
+				if (!response) {
+					projectsError.set("Invalid response from server");
+					return;
+				}
+				projects.set(response);
+			} catch (e) {
+				projectsError.set(e instanceof Error ? e.message : "Failed to load projects");
+				console.error(e);
+			} finally {
+				projectsLoading.set(false);
 			}
-			projects.set(response);
-		} catch (e) {
-			projectsError.set(e instanceof Error ? e.message : "Failed to load projects");
-			console.error(e);
-		} finally {
-			projectsLoading.set(false);
-		}
+		};
+
+		loadProjects();
+
+		return () => {
+			hashCleanup();
+		};
 	});
 </script>
 
@@ -60,7 +74,7 @@
 					<img src={logo} alt="Logo" class="h-8 w-10 mr-4" />
 					<div class="text-lg text-white font-bold pr-8">Multinear</div>
 				</a>
-				{#each navLinks() as link}
+				{#each navLinks as link}
 					<NavLink href={link.href} label={link.label} />
 				{/each}
 			</div>

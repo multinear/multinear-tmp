@@ -4,6 +4,7 @@
     import { Button } from "$lib/components/ui/button";
     import { page } from '$app/stores';
     import { getRunDetails } from '$lib/api';
+    import { selectedRunId } from '$lib/stores/projects';
 
 
     let runId: string | null = null;
@@ -12,10 +13,7 @@
     let error: string | null = null;
 
     $: {
-        // Extract run ID from hash
-        const hash = $page.url.hash;
-        runId = hash.startsWith('#') ? hash.slice(1) : hash;
-        if (runId) loadRunDetails(runId);
+        if ($selectedRunId) loadRunDetails($selectedRunId);
     }
 
     async function loadRunDetails(id: string) {
@@ -33,7 +31,7 @@
 </script>
 
 <div class="container mx-auto p-4">
-    <h1 class="text-4xl font-bold mb-8">Run Details</h1>
+    <h1 class="text-4xl font-bold mb-8">Run: {$selectedRunId.slice(-8)}</h1>
 
     {#if loading}
         <div class="text-center text-gray-500">Loading run details...</div>

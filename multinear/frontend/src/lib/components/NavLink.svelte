@@ -4,12 +4,18 @@
     export let href: string;
     export let label: string;
 
-    $: isActive = (
-        href === $page.url.pathname ||
-        href.split('#')[0].startsWith(`${$page.url.pathname}`) ||
-        `${href.split('#')[0]}/`.startsWith(`${$page.url.pathname}`) ||
-        (href === '/' && $page.url.pathname.startsWith('/dashboard'))
-    );
+
+
+    function checkIsActive(href: string, pathname: string): boolean {
+        return (
+            href === pathname ||
+            href.split('#')[0].startsWith(`${pathname}`) ||
+            `${href.split('#')[0]}/`.startsWith(`${pathname}`) ||
+            (href === '/' && pathname.startsWith('/dashboard'))
+        );
+    }
+
+    $: isActive = checkIsActive(href, $page.url.pathname);
 </script>
 
 <a {href} class="block">

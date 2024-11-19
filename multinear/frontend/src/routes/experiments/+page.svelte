@@ -2,19 +2,14 @@
     import * as Card from "$lib/components/ui/card";
     import { Button } from "$lib/components/ui/button";
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
     import { getRecentRuns } from '$lib/api';
     import type { RecentRun } from '$lib/api';
-    import { setupHashChangeHandler, selectedProjectId } from '$lib/stores/projects';
+    import { selectedProjectId } from '$lib/stores/projects';
+
 
     let runs: RecentRun[] = [];
     let loading = true;
     let error: string | null = null;
-
-    onMount(() => {
-        const { cleanup } = setupHashChangeHandler();
-        return cleanup;
-    });
 
     async function loadData() {
         loading = true;
@@ -30,12 +25,12 @@
     }
 
     // Reactive statement to load data when selectedProjectId changes
-    $: if (selectedProjectId) {
+    $: if ($selectedProjectId) {
         loadData();
     }
 
     function handleRunSelect(runId: string) {
-        goto(`/run#${runId}`);
+        goto(`/run#${$selectedProjectId}/r:${runId}`);
     }
 </script>
 

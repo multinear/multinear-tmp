@@ -24,12 +24,8 @@
     import * as Tooltip from "$lib/components/ui/tooltip";
     import { goto } from '$app/navigation';
 
-    import { projects, projectsLoading, projectsError, selectedProjectId, setupHashChangeHandler } from '$lib/stores/projects';
+    import { projects, projectsLoading, projectsError, selectedProjectId } from '$lib/stores/projects';
 
-    onMount(() => {
-        const { cleanup } = setupHashChangeHandler();
-        return cleanup;
-    });
 
     $: currentProject = $projects.find(p => p.id === $selectedProjectId);
 
@@ -218,7 +214,7 @@
     }
 
     function handleRunSelect(runId: string) {
-        goto(`/run#${runId}`);
+        goto(`/run#${$selectedProjectId}/r:${runId}`);
     }
 </script>
 
