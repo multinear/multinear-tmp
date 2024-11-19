@@ -12,8 +12,8 @@
         AlertCircle,
         CheckCircle2,
         XCircle,
-        Bookmark,
-        FileEdit,
+        // Bookmark,
+        // FileEdit,
         Play,
     } from "lucide-svelte";
     import LineChart from "$lib/components/LineChart.svelte";
@@ -22,24 +22,16 @@
     import { startExperiment, getJobStatus, getRecentRuns } from '$lib/api';
     import type { JobResponse, RecentRun } from '$lib/api';
     import * as Tooltip from "$lib/components/ui/tooltip";
+    import { goto } from '$app/navigation';
 
-    import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
-
-    // Hash-based routing
-    let projectId: string = '';
-
-    function handleHashChange() {
-        const hash = window.location.hash;
-        projectId = hash ? hash.slice(1) : ''; // Remove the # from the hash
-    }
+    import { projects, projectsLoading, projectsError, selectedProjectId, setupHashChangeHandler } from '$lib/stores/projects';
 
     onMount(() => {
-        handleHashChange(); // Initial hash check
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
+        const { cleanup } = setupHashChangeHandler();
+        return cleanup;
     });
 
-    $: currentProject = $projects.find(p => p.id === projectId);
+    $: currentProject = $projects.find(p => p.id === $selectedProjectId);
 
     let searchTerm = "";
 
@@ -58,7 +50,7 @@
         recentRunsLoading = true;
         recentRunsError = null;
         try {
-            recentRuns = await getRecentRuns(projectId);
+            recentRuns = await getRecentRuns($selectedProjectId);
         } catch (error) {
             console.error('Error loading recent runs:', error);
             recentRunsError = error instanceof Error ? error.message : 'Unknown error';
@@ -188,7 +180,7 @@
 
     async function handleStartExperiment() {
         try {
-            const data = await startExperiment(projectId);
+            const data = await startExperiment($selectedProjectId);
             currentJob = data.job_id;
             jobStatus = 'started';
             jobDetails = null;  // Reset job details
@@ -197,7 +189,7 @@
             // Start polling
             while (jobStatus !== 'completed' && jobStatus !== 'failed' && jobStatus !== 'not_found') {
                 await new Promise(r => setTimeout(r, 1000));
-                const statusData = await getJobStatus(projectId, currentJob);
+                const statusData = await getJobStatus($selectedProjectId, currentJob);
                 jobStatus = statusData.status;
                 jobDetails = statusData;
                 
@@ -223,6 +215,10 @@
             console.error('Error:', error);
             jobStatus = 'error';
         }
+    }
+
+    function handleRunSelect(runId: string) {
+        goto(`/run#${runId}`);
     }
 </script>
 
@@ -261,14 +257,14 @@
                 <Card.Header>
                     <Card.Title class="text-yellow-800">Project Not Found</Card.Title>
                     <Card.Description class="text-yellow-600 pt-2">
-                        The project "{projectId}" could not be found.
+                        The project "{$selectedProjectId}" could not be found.
                     </Card.Description>
                 </Card.Header>
                 <Card.Footer class="flex justify-end">
                     <Button 
                         variant="outline" 
                         class="border-yellow-200 text-yellow-800 hover:bg-yellow-100"
-                        on:click={() => window.location.hash = ''}
+                        on:click={() => window.location.href = '/'}
                     >
                         Go Back
                     </Button>
@@ -493,8 +489,7 @@
                 {:else}
                     <Table.Root>
                         <Table.Caption>
-                            <!-- Recent experiment runs and their key metadata. -->
-                            <a href="/experiments">View all runs</a>
+                            <a href="/experiments#{$selectedProjectId}">View all runs</a>
                         </Table.Caption>
                         <Table.Header>
                             <Table.Row>
@@ -505,12 +500,12 @@
                                 <Table.Head>Total Tests</Table.Head>
                                 <Table.Head>Evaluation Score</Table.Head>
                                 <Table.Head>Test Results</Table.Head>
-                                <Table.Head>Actions</Table.Head>
+                                <!-- <Table.Head>Actions</Table.Head> -->
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
                             {#each recentRuns as run}
-                                <Table.Row class="group">
+                                <Table.Row class="group cursor-pointer" on:click={() => handleRunSelect(run.id)}>
                                     <Table.Cell class="font-medium">
                                         <Tooltip.Root>
                                             <Tooltip.Trigger>{run.id.slice(-8)}</Tooltip.Trigger>
@@ -586,7 +581,7 @@
                                             </Tooltip.Content>
                                         </Tooltip.Root>
                                     </Table.Cell>
-                                    <Table.Cell>
+                                    <!-- <Table.Cell>
                                         <div
                                             class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
@@ -615,7 +610,7 @@
                                                 </Button>
                                             {/if}
                                         </div>
-                                    </Table.Cell>
+                                    </Table.Cell> -->
                                 </Table.Row>
                             {/each}
                         </Table.Body>

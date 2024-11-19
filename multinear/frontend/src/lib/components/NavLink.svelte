@@ -1,13 +1,13 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button";
     import { page } from "$app/stores";
-
     export let href: string;
     export let label: string;
 
     $: isActive = (
-        $page.url.pathname === href ||
-        $page.url.pathname === `${href}/` ||
+        href === $page.url.pathname ||
+        href.split('#')[0].startsWith(`${$page.url.pathname}`) ||
+        `${href.split('#')[0]}/`.startsWith(`${$page.url.pathname}`) ||
         (href === '/' && $page.url.pathname.startsWith('/dashboard'))
     );
 </script>
@@ -20,10 +20,10 @@
         {label}
     </Button>
 </a>
-
 <style>
     :global(.active-nav) {
         text-decoration: underline;
         text-underline-offset: 2px;
     }
 </style>
+

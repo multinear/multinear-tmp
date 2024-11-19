@@ -7,14 +7,30 @@
 	import { Book } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { getProjects } from '$lib/api';
-	import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
+	import { projects, projectsLoading, projectsError, selectedProjectId } from '$lib/stores/projects';
+	import { page } from '$app/stores';
 
 	let { children } = $props();
 
-	const navLinks = [
+	const baseNavLinks = [
 		{ href: '/', label: 'Home' },
-		{ href: '/experiments', label: 'Experiments' }
+		// { href: '/experiments', label: 'Experiments' }
 	];
+
+	// Dynamically add Run link if we're on a run page
+	const navLinks = $derived(() => {
+		const pathname = $page.url.pathname;
+		if (pathname.startsWith('/run')) {
+			return [...baseNavLinks, { href: pathname + $page.url.hash, label: 'Run' }];
+		}
+		// if (pathname.startsWith('/experiments')) {
+		// 	return [...baseNavLinks, { href: pathname + $page.url.hash, label: 'Experiments' }];
+		// }
+		if ($selectedProjectId) {
+			return [...baseNavLinks, { href: `/experiments#${$selectedProjectId}`, label: 'Experiments' }];
+		}
+		return baseNavLinks;
+	});
 
 	onMount(async () => {
 		try {
@@ -44,7 +60,7 @@
 					<img src={logo} alt="Logo" class="h-8 w-10 mr-4" />
 					<div class="text-lg text-white font-bold pr-8">Multinear</div>
 				</a>
-				{#each navLinks as link}
+				{#each navLinks() as link}
 					<NavLink href={link.href} label={link.label} />
 				{/each}
 			</div>

@@ -65,9 +65,19 @@ export async function getJobStatus(projectId: string, jobId: string): Promise<Jo
 }
 
 export async function getRecentRuns(projectId: string, limit: number = 5, offset: number = 0): Promise<RecentRun[]> {
+    // return [];
     const response = await fetch(`${API_URL}/runs/${projectId}?limit=${limit}&offset=${offset}`);
     if (!response.ok) {
         throw new Error(`Failed to fetch recent runs: ${response.statusText}`);
+    }
+    return response.json();
+}
+
+export async function getRunDetails(runId: string): Promise<any> {
+    return {};
+    const response = await fetch(`${API_URL}/runs/${runId}`);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch run details: ${response.statusText}`);
     }
     return response.json();
 }
