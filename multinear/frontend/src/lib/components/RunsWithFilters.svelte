@@ -24,12 +24,66 @@
     export let loadingError: string | null;
     export let showViewAll: boolean = false;
 
-    $: modelVersions = [...new Set(runsList.map(run => run.model))];
-    $: codeRevisions = [...new Set(runsList.map(run => run.revision))];
+    $: modelVersions = ["", ...new Set(runsList.map(run => run.model))];
+    $: codeRevisions = ["", ...new Set(runsList.map(run => run.revision))];
 
-    const dateRanges = ["Today", "This Week", "This Month", "Custom Range"];
-    const testGroups = ["All Tests", "Security Tests", "Performance Tests", "Functionality Tests"];
-    let searchTerm: string;
+    const dateRanges = ["", ...["Today", "This Week", "This Month", "Custom Range"]];
+    const testGroups = ["", "Security Tests", "Performance Tests", "Functionality Tests"];
+
+    // Define types for select items
+    type SelectItem = { value: string; label: string };
+
+    // State for selected values
+    let selectedDateRange: SelectItem = { value: '', label: ''};
+    let selectedModelVersion: SelectItem = { value: '', label: ''};
+    let selectedCodeRevision: SelectItem = { value: '', label: ''};
+    let selectedTestGroup: SelectItem = { value: '', label: ''};
+    let searchTerm: string = "";
+
+    // Add filtered runs reactive statement
+    $: filteredRuns = runsList.filter(run => {
+        // Date range filter
+        if (selectedDateRange?.value) {
+            const runDate = new Date(run.date);
+            const today = new Date();
+            switch (selectedDateRange.value) {
+                case "today":
+                    if (runDate.toDateString() !== today.toDateString()) return false;
+                    break;
+                case "this week":
+                    const weekAgo = new Date(today.setDate(today.getDate() - 7));
+                    if (runDate < weekAgo) return false;
+                    break;
+                case "this month":
+                    const monthAgo = new Date(today.setMonth(today.getMonth() - 1));
+                    if (runDate < monthAgo) return false;
+                    break;
+            }
+        }
+
+        // Model version filter
+        if (selectedModelVersion?.value && run.model !== selectedModelVersion.value) return false;
+
+        // Code revision filter
+        if (selectedCodeRevision?.value && run.revision !== selectedCodeRevision.value) return false;
+
+        // Test group filter
+        if (selectedTestGroup?.value && selectedTestGroup.value !== "all-tests") {
+            // Implement test group filtering logic
+        }
+
+        // Search term filter
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            return (
+                run.id.toLowerCase().includes(searchLower) ||
+                run.model.toLowerCase().includes(searchLower) ||
+                run.revision.toLowerCase().includes(searchLower)
+            );
+        }
+
+        return true;
+    });
 
     function handleRunSelect(runId: string) {
         goto(`/run#${$selectedProjectId}/r:${runId}`);
@@ -46,72 +100,116 @@
         <!-- Date Range Filter -->
         <div class="flex flex-col space-y-1.5">
             <Label for="date-range">Date Range</Label>
-            <Select.Root portal={null}>
+            <Select.Root
+                selected={selectedDateRange}
+                onSelectedChange={(v) => { 
+                    if (v) selectedDateRange = {value: v.value, label: v.label!};
+                    else selectedDateRange = undefined;
+                }}
+            >
                 <Select.Trigger class="w-[180px]" id="date-range">
                     <Select.Value placeholder="Select date range" />
                 </Select.Trigger>
                 <Select.Content>
                     <Select.Group>
                         {#each dateRanges as range}
-                            <Select.Item value={range.toLowerCase()}>{range}</Select.Item>
+                            <Select.Item 
+                                value={range.toLowerCase()} 
+                                label={range}
+                                class="min-h-[32px]"
+                            >
+                                {range}
+                            </Select.Item>
                         {/each}
                     </Select.Group>
                 </Select.Content>
-                <Select.Input name="dateRange" />
             </Select.Root>
         </div>
         
         <!-- Model Version Filter -->
         <div class="flex flex-col space-y-1.5">
             <Label for="model-version">Model Version</Label>
-            <Select.Root portal={null}>
+            <Select.Root
+                selected={selectedModelVersion}
+                onSelectedChange={(v) => { 
+                    if (v) selectedModelVersion = {value: v.value, label: v.label!};
+                    else selectedModelVersion = undefined;
+                }}
+            >
                 <Select.Trigger class="w-[180px]" id="model-version">
                     <Select.Value placeholder="Select model version" />
                 </Select.Trigger>
                 <Select.Content>
                     <Select.Group>
                         {#each modelVersions as version}
-                            <Select.Item value={version}>{version}</Select.Item>
+                            <Select.Item 
+                                value={version} 
+                                label={version}
+                                class="min-h-[32px]"
+                            >
+                                {version}
+                            </Select.Item>
                         {/each}
                     </Select.Group>
                 </Select.Content>
-                <Select.Input name="modelVersion" />
             </Select.Root>
         </div>
         
         <!-- Code Revision Filter -->
         <div class="flex flex-col space-y-1.5">
             <Label for="code-revision">Code Revision</Label>
-            <Select.Root portal={null}>
+            <Select.Root
+                selected={selectedCodeRevision}
+                onSelectedChange={(v) => { 
+                    if (v) selectedCodeRevision = {value: v.value, label: v.label!};
+                    else selectedCodeRevision = undefined;
+                }}
+            >
                 <Select.Trigger class="w-[180px]" id="code-revision">
                     <Select.Value placeholder="Select code revision" />
                 </Select.Trigger>
                 <Select.Content>
                     <Select.Group>
                         {#each codeRevisions as revision}
-                            <Select.Item value={revision}>{revision}</Select.Item>
+                            <Select.Item 
+                                value={revision} 
+                                label={revision}
+                                class="min-h-[32px]"
+                            >
+                                {revision}
+                            </Select.Item>
                         {/each}
                     </Select.Group>
                 </Select.Content>
-                <Select.Input name="codeRevision" />
             </Select.Root>
         </div>
         
         <!-- Test Group Filter -->
         <div class="flex flex-col space-y-1.5">
             <Label for="test-group">Test Group</Label>
-            <Select.Root portal={null}>
+            <Select.Root
+                selected={selectedTestGroup}
+                onSelectedChange={(v) => { 
+                    if (v) selectedTestGroup = {value: v.value, label: v.label!};
+                    else selectedTestGroup = undefined;
+                }}
+            >
                 <Select.Trigger class="w-[180px]" id="test-group">
                     <Select.Value placeholder="Select test group" />
                 </Select.Trigger>
                 <Select.Content>
                     <Select.Group>
                         {#each testGroups as group}
-                            <Select.Item value={group.toLowerCase().replace(' ', '-')}>{group}</Select.Item>
+                            <Select.Item 
+                                value={group.toLowerCase().replace(' ', '-')}
+                                label={group}
+                                class="min-h-[32px]"
+                            >
+                                {group}
+                            </Select.Item>
                         {/each}
                     </Select.Group>
                 </Select.Content>
-                <Select.Input name="testGroup" />
             </Select.Root>
         </div>
         
@@ -167,7 +265,7 @@
                     </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                    {#each runsList as run}
+                    {#each filteredRuns as run}
                         <Table.Row class="group cursor-pointer" on:click={() => handleRunSelect(run.id)}>
                             <Table.Cell class="font-medium">
                                 <Tooltip.Root>
