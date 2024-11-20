@@ -256,11 +256,15 @@
                                         </span>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {#if task.eval_score !== undefined}
+                                        <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex">
+                                            <div
+                                                class="h-4 min-w-[5px] {task.eval_passed ? 'bg-green-600' : 'bg-red-600'}"
+                                                style="width: {(task.eval_score * 100).toFixed(0)}%"
+                                            ></div>
+                                        </div>
+                                        <div class="text-center text-xs font-medium">
                                             {(task.eval_score * 100).toFixed(0)}%
-                                        {:else}
-                                            -
-                                        {/if}
+                                        </div>
                                     </Table.Cell>
                                 </Table.Row>
                                 {#if isExpanded}
@@ -293,9 +297,14 @@
                                                     {#if task.task_details}
                                                         <div>
                                                             <h5 class="font-semibold mb-1">Details</h5>
-                                                            <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
-                                                                {JSON.stringify(task.task_details, null, 2)}
-                                                            </div>
+                                                            {#each Object.entries(task.task_details) as [key, value]}
+                                                                <div class="mb-1 pl-2">
+                                                                    <h6 class="font-semibold">{key}</h6>
+                                                                    <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                    </div>
+                                                                </div>
+                                                            {/each}
                                                         </div>
                                                     {/if}
                                                     {#if task.task_logs}
@@ -329,10 +338,20 @@
                                                 <!-- Evaluation Details Column -->
                                                 <div class="space-y-4 pl-4">
                                                     <h4 class="font-semibold text-lg mb-2">Evaluation</h4>
-                                                    {#if task.eval_spec}
+                                                    <div class="flex items-center gap-4 mb-4">
+                                                        <div class={`px-4 py-2 rounded-lg font-semibold
+                                                            ${task.eval_passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            Score: {(task.eval_score * 100).toFixed(0)}%
+                                                        </div>
+                                                        <div class={`px-4 py-2 rounded-lg font-semibold
+                                                            ${task.eval_passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            {task.eval_passed ? 'PASSED' : 'FAILED'}
+                                                        </div>
+                                                    </div>
+                                                    {#if task.eval_details}
                                                         <div>
-                                                            <h5 class="font-semibold mb-1">Spec</h5>
-                                                            {#each Object.entries(task.eval_spec) as [key, value]}
+                                                            <h5 class="font-semibold mb-1">Details</h5>
+                                                            {#each Object.entries(task.eval_details) as [key, value]}
                                                                 <div class="mb-1 pl-2">
                                                                     <h6 class="font-semibold">{key}</h6>
                                                                     <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
@@ -342,10 +361,10 @@
                                                             {/each}
                                                         </div>
                                                     {/if}
-                                                    {#if task.eval_details}
+                                                    {#if task.eval_spec}
                                                         <div>
-                                                            <h5 class="font-semibold mb-1">Details</h5>
-                                                            {#each Object.entries(task.eval_details) as [key, value]}
+                                                            <h5 class="font-semibold mb-1">Spec</h5>
+                                                            {#each Object.entries(task.eval_spec) as [key, value]}
                                                                 <div class="mb-1 pl-2">
                                                                     <h6 class="font-semibold">{key}</h6>
                                                                     <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
