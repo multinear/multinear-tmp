@@ -16,12 +16,12 @@ install:
 # Run web server
 .PHONY: web
 web:
-	$(python_cmd) uvicorn api.main:app
+	$(python_cmd) uvicorn main:app
 
 # Run web server in development mode
 .PHONY: web_dev
 web_dev:
-	$(python_cmd) uvicorn api.main:app --reload
+	$(python_cmd) uvicorn main:app --reload
 
 # Build frontend
 .PHONY: frontend_build

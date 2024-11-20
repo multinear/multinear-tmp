@@ -1,9 +1,9 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.types import JSON
 from datetime import datetime, timezone
 from contextlib import contextmanager
-from typing import Dict, Any, Optional, List
+from typing import Dict, Optional, List
 import uuid
 
 
@@ -13,6 +13,7 @@ Base = declarative_base()
 class TaskStatus:
     STARTING = "starting"
     RUNNING = "running"
+    EVALUATING = "evaluating"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -138,11 +139,18 @@ class TaskModel(Base):
     task_number = Column(Integer, nullable=False)
     status = Column(String, nullable=False)
     error = Column(String, nullable=True)
-    input = Column(JSON, nullable=True)
-    output = Column(JSON, nullable=True)
-    details = Column(JSON, nullable=True)
-    logs = Column(JSON, nullable=True)
+    task_input = Column(JSON, nullable=True)
+    task_output = Column(JSON, nullable=True)
+    task_details = Column(JSON, nullable=True)
+    task_logs = Column(JSON, nullable=True)
+    eval_spec = Column(JSON, nullable=True)
+    eval_passed = Column(Boolean, nullable=True)
+    eval_score = Column(Float, nullable=True)
+    eval_details = Column(JSON, nullable=True)
+    eval_logs = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    executed_at = Column(DateTime, nullable=True)
+    evaluated_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     job = relationship("JobModel", back_populates="tasks")
 
@@ -162,16 +170,30 @@ class TaskModel(Base):
             return task_id
 
     @classmethod
-    def complete(cls, task_id: str, input: any, output: any, details: dict, logs: dict):
-        """Mark task as completed with results"""
+    def executed(cls, task_id: str, input: any, output: any, details: dict, logs: dict):
+        """Mark task as executed with results"""
         with db_context() as db:
             task = db.query(cls).filter(cls.id == task_id).one()
-            task.status = TaskStatus.COMPLETED
-            task.input = input
-            task.output = output
-            task.details = details
-            task.logs = logs
-            task.finished_at = datetime.now()
+            task.status = TaskStatus.EVALUATING
+            task.task_input = input
+            task.task_output = output
+            task.task_details = details
+            task.task_logs = logs
+            task.executed_at = datetime.now()
+            db.commit()
+
+    @classmethod
+    def evaluated(cls, task_id: str, spec: dict, passed: bool, score: float, details: dict, logs: dict):
+        """Mark task as evaluated and completed"""
+        with db_context() as db:
+            task = db.query(cls).filter(cls.id == task_id).one()
+            task.status = TaskStatus.COMPLETED if passed else TaskStatus.FAILED
+            task.eval_spec = spec
+            task.eval_passed = passed
+            task.eval_score = score
+            task.eval_details = details
+            task.eval_logs = logs
+            task.evaluated_at = task.finished_at = datetime.now()
             db.commit()
 
     @classmethod

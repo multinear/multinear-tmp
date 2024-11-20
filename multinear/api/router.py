@@ -1,59 +1,42 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException, APIRouter, Query
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-import yaml
+from fastapi import BackgroundTasks, HTTPException, APIRouter, Query
 from typing import List
 from pathlib import Path
+import yaml
 from datetime import datetime, timedelta, timezone
 import random
 
-from .schemas import Project, JobDetails, RecentRun, FullRunDetails, TaskDetails
+from ..api.schemas import Project, JobDetails, RecentRun, FullRunDetails, TaskDetails
 from ..engine.run import run_experiment
 from ..engine.storage import init_db, ProjectModel, JobModel, TaskModel, TaskStatus
 
 
-init_db()
+def init_api():
+    init_db()
 
-# Create FastAPI app with custom docs URLs
-app = FastAPI(
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
-)
+    # Get the current working directory and load multinear.yaml
+    current_dir = Path.cwd()
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    # Read project configuration from local multinear.yaml
+    with open(current_dir / ".multinear" / "config.yaml", "r") as f:
+        config = yaml.safe_load(f)
 
-# Get the current working directory and load multinear.yaml
-current_dir = Path.cwd()
-project_root = current_dir.parent
+    # Create single project configuration
+    project_id = config["project"]["id"]
+    project_data = {
+        "id": project_id,
+        "name": config["project"]["name"],
+        "description": config["project"]["description"],
+        "folder": str(current_dir)
+    }
 
-# Read project configuration from local multinear.yaml
-with open(current_dir / ".multinear" / "config.yaml", "r") as f:
-    config = yaml.safe_load(f)
+    # Update project in database on startup
+    ProjectModel.save(
+        id=project_id,
+        name=project_data["name"],
+        description=project_data["description"],
+        folder=project_data["folder"]
+    )
 
-# Create single project configuration
-project_id = config["project"]["id"]
-project_data = {
-    "id": project_id,
-    "name": config["project"]["name"],
-    "description": config["project"]["description"],
-    "folder": str(current_dir)
-}
-
-# Update project in database on startup
-project = ProjectModel.save(
-    id=project_id,
-    name=project_data["name"],
-    description=project_data["description"],
-    folder=project_data["folder"]
-)
 
 def background_job(project_id: str, job_id: str):
     """Run the experiment for the given project"""
@@ -75,7 +58,7 @@ def background_job(project_id: str, job_id: str):
 
         job.finish()
     except Exception as e:
-        print(f"Error running experiment: {e}")
+        print(f"Error running experiment API: {e}")
         job = JobModel.find(job_id)
         job.update(
             status="failed",
@@ -84,7 +67,6 @@ def background_job(project_id: str, job_id: str):
                 "status_map": TaskModel.get_status_map(job_id)
             }
         )
-
 
 # Create API router
 api_router = APIRouter(prefix="/api")
@@ -219,7 +201,7 @@ async def get_run_details(run_id: str):
         TaskDetails(
             id=task.id,
             status=task.status,
-            result={"output": task.output} if type(task.output) == str else task.output,
+            result={"output": task.task_output} if type(task.task_output) == str else task.task_output,
             error=task.error
         ) for task in tasks
     ]
@@ -237,10 +219,3 @@ async def get_run_details(run_id: str):
         status=job.status,
         tasks=task_details
     )
-
-# Include API router
-app.include_router(api_router)
-
-# Serve frontend
-frontend_path = Path(__file__).parent.parent / "frontend" / "build"
-app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

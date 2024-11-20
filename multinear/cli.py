@@ -75,7 +75,7 @@ def main():
             return
         
         uvicorn_config = {
-            "app": "multinear.api.main:app",
+            "app": "multinear.main:app",
             "host": args.host,
             "port": args.port,
         }
