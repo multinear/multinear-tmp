@@ -7,6 +7,7 @@
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
     import { formatDuration, intervalToDuration } from 'date-fns';
+    import { ChevronRight } from 'lucide-svelte';
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -191,6 +192,7 @@
                                 <Table.Head>Task ID</Table.Head>
                                 <Table.Head>Started</Table.Head>
                                 <Table.Head>Duration</Table.Head>
+                                <Table.Head>Model</Table.Head>
                                 <Table.Head>Input</Table.Head>
                                 <Table.Head>Status</Table.Head>
                                 <Table.Head>Score</Table.Head>
@@ -205,21 +207,10 @@
                                 >
                                     <Table.Cell class="w-4">
                                         <Button variant="ghost" size="sm" class="h-4 w-4 p-0">
-                                            <svg 
-                                                class="h-4 w-4 transition-transform duration-200" 
-                                                class:rotate-90={isExpanded}
-                                                xmlns="http://www.w3.org/2000/svg" 
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path 
-                                                    fill="none" 
-                                                    stroke="currentColor" 
-                                                    stroke-linecap="round" 
-                                                    stroke-linejoin="round" 
-                                                    stroke-width="2" 
-                                                    d="M9 18l6-6-6-6"
-                                                />
-                                            </svg>
+                                            <ChevronRight 
+                                                class="h-4 w-4 transition-transform duration-200 text-gray-400
+                                                {isExpanded ? 'rotate-90' : ''}"
+                                            />
                                         </Button>
                                     </Table.Cell>
                                     <Table.Cell class="font-medium font-mono">
@@ -244,11 +235,14 @@
                                             -
                                         {/if}
                                     </Table.Cell>
+                                    <Table.Cell>
+                                        {task.task_details.model}
+                                    </Table.Cell>
                                     <Table.Cell class="max-w-xs">
                                         {truncateInput(task.task_input)}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium
                                             ${task.status === 'completed' ? 'bg-green-100 text-green-800' : 
                                             task.status === 'failed' ? 'bg-red-100 text-red-800' : 
                                             'bg-gray-100 text-gray-800'}`}>
@@ -269,7 +263,7 @@
                                 </Table.Row>
                                 {#if isExpanded}
                                     <Table.Row class="bg-gray-50 hover:bg-gray-50">
-                                        <Table.Cell colspan={7} class="border-t border-gray-100">
+                                        <Table.Cell colspan={8} class="border-t border-gray-100">
                                             <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <!-- Task Details Column -->
                                                 <div class="space-y-4 pr-12 border-r border-gray-200">
@@ -373,7 +367,7 @@
                                                             <div class="text-sm text-gray-800">
                                                                 Score: {(task.eval_score * 100).toFixed(0)}%
                                                             </div>
-                                                            <div class={`px-4 py-2 rounded-lg font-semibold
+                                                            <div class={`px-4 py-1 rounded-lg font-semibold
                                                                 ${task.eval_passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                                                 {task.eval_passed ? 'PASSED' : 'FAILED'}
                                                             </div>
