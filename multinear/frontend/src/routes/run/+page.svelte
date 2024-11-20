@@ -200,7 +200,7 @@
                             {#each filteredTasks as task}
                                 {@const isExpanded = expandedTaskId === task.id}
                                 <Table.Row 
-                                    class={`cursor-pointer ${isExpanded ? 'bg-gray-50' : ''}`}
+                                    class={`cursor-pointer ${isExpanded ? 'bg-gray-200 hover:bg-gray-200' : ''}`}
                                     on:click={() => expandedTaskId = isExpanded ? null : task.id}
                                 >
                                     <Table.Cell class="w-4">
@@ -268,12 +268,28 @@
                                     </Table.Cell>
                                 </Table.Row>
                                 {#if isExpanded}
-                                    <Table.Row class="bg-gray-50">
+                                    <Table.Row class="bg-gray-50 hover:bg-gray-50">
                                         <Table.Cell colspan={7} class="border-t border-gray-100">
                                             <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <!-- Task Details Column -->
                                                 <div class="space-y-4 pr-12 border-r border-gray-200">
-                                                    <h4 class="font-semibold text-lg mb-2">Task</h4>
+                                                    <div class="flex justify-between items-center mb-2">
+                                                        <h4 class="font-semibold text-lg">Task</h4>
+                                                        <div class="text-sm text-gray-800">
+                                                            Duration: 
+                                                            {#if task.executed_at}
+                                                                {formatDuration(
+                                                                    intervalToDuration({
+                                                                        start: new Date(task.created_at),
+                                                                        end: new Date(task.executed_at)
+                                                                    }),
+                                                                    { format: ['minutes', 'seconds'] }
+                                                                )}
+                                                            {:else}
+                                                                -
+                                                            {/if}
+                                                        </div>
+                                                    </div>
                                                     {#if task.task_input}
                                                         <div>
                                                             <h5 class="font-semibold mb-1">Input</h5>
@@ -337,15 +353,30 @@
 
                                                 <!-- Evaluation Details Column -->
                                                 <div class="space-y-4 pl-4">
-                                                    <h4 class="font-semibold text-lg mb-2">Evaluation</h4>
-                                                    <div class="flex items-center gap-4 mb-4">
-                                                        <div class={`px-4 py-2 rounded-lg font-semibold
-                                                            ${task.eval_passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                            Score: {(task.eval_score * 100).toFixed(0)}%
-                                                        </div>
-                                                        <div class={`px-4 py-2 rounded-lg font-semibold
-                                                            ${task.eval_passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                            {task.eval_passed ? 'PASSED' : 'FAILED'}
+                                                    <div class="flex justify-between items-center mb-2">
+                                                        <h4 class="font-semibold text-lg">Evaluation</h4>
+                                                        <div class="flex items-center gap-4">
+                                                            <div class="text-sm text-gray-800">
+                                                                Duration: 
+                                                                {#if task.evaluated_at}
+                                                                    {formatDuration(
+                                                                        intervalToDuration({
+                                                                            start: new Date(task.executed_at),
+                                                                            end: new Date(task.evaluated_at)
+                                                                        }),
+                                                                        { format: ['minutes', 'seconds'] }
+                                                                    )}
+                                                                {:else}
+                                                                    -
+                                                                {/if}
+                                                            </div>
+                                                            <div class="text-sm text-gray-800">
+                                                                Score: {(task.eval_score * 100).toFixed(0)}%
+                                                            </div>
+                                                            <div class={`px-4 py-2 rounded-lg font-semibold
+                                                                ${task.eval_passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                {task.eval_passed ? 'PASSED' : 'FAILED'}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     {#if task.eval_details}
