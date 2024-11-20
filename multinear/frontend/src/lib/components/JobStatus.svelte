@@ -37,6 +37,11 @@
                                         class="absolute top-0 h-4 bg-red-500"
                                         style="width: {100 / $jobStore.jobDetails.total_tasks}%; left: {(index / $jobStore.jobDetails.total_tasks) * 100}%"
                                     ></div>
+                                {:else if status === 'evaluating'}
+                                    <div 
+                                        class="absolute top-0 h-4 bg-yellow-500 progress-stripe"
+                                        style="width: {100 / $jobStore.jobDetails.total_tasks}%; left: {(index / $jobStore.jobDetails.total_tasks) * 100}%"
+                                    ></div>
                                 {:else if status === 'completed'}
                                     <div 
                                         class="absolute top-0 h-4 bg-green-600"
@@ -56,6 +61,7 @@
                                                 <div class="w-2 h-2 rounded-full {
                                                     status === 'completed' ? 'bg-green-500' : 
                                                     status === 'running' ? 'bg-blue-500' :
+                                                    status === 'evaluating' ? 'bg-yellow-500' :
                                                     status === 'failed' ? 'bg-red-500' : 'bg-gray-500'
                                                 }"></div>
                                                 {status}: {count}

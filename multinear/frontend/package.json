@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"@sveltejs/adapter-static": "^3.0.6",
-		"chart.js": "^4.4.6"
+		"chart.js": "^4.4.6",
+		"date-fns": "^4.1.0"
 	}
 }

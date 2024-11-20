@@ -8,12 +8,14 @@
     import * as Table from "$lib/components/ui/table";
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
-    import * as Select from "$lib/components/ui/select";
+    // import * as Select from "$lib/components/ui/select";
+    import { formatDuration, intervalToDuration } from 'date-fns';
 
     let runId: string | null = null;
     let runDetails: any = null;
     let loading = true;
     let error: string | null = null;
+    let expandedTaskId: string | null = null;
 
     $: {
         if ($selectedRunId) loadRunDetails($selectedRunId);
@@ -60,6 +62,18 @@
     $: availableStatuses = Object.entries(statusCounts)
         .filter(([_, count]: [any, any]) => count > 0)
         .map(([status]) => status);
+
+    function truncateInput(input: any, maxLength: number = 30): string {
+        if (!input) return '-';
+        
+        const text = typeof input === 'object' && 'str' in input 
+            ? input.str 
+            : JSON.stringify(input);
+            
+        return text.length > maxLength 
+            ? text.slice(0, maxLength) + '...' 
+            : text;
+    }
 </script>
 
 <div class="container mx-auto p-4">
@@ -176,17 +190,46 @@
                     <Table.Root>
                         <Table.Header>
                             <Table.Row>
+                                <Table.Head></Table.Head>
                                 <Table.Head>Task ID</Table.Head>
+                                <Table.Head>Input</Table.Head>
                                 <Table.Head>Status</Table.Head>
-                                <Table.Head>Result</Table.Head>
-                                <Table.Head>Error</Table.Head>
+                                <Table.Head>Started</Table.Head>
+                                <Table.Head>Duration</Table.Head>
+                                <Table.Head>Score</Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
                             {#each filteredTasks as task}
-                                <Table.Row>
+                                {@const isExpanded = expandedTaskId === task.id}
+                                <Table.Row 
+                                    class={`cursor-pointer ${isExpanded ? 'bg-gray-50' : ''}`}
+                                    on:click={() => expandedTaskId = isExpanded ? null : task.id}
+                                >
+                                    <Table.Cell class="w-4">
+                                        <Button variant="ghost" size="sm" class="h-4 w-4 p-0">
+                                            <svg 
+                                                class="h-4 w-4 transition-transform duration-200" 
+                                                class:rotate-90={isExpanded}
+                                                xmlns="http://www.w3.org/2000/svg" 
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path 
+                                                    fill="none" 
+                                                    stroke="currentColor" 
+                                                    stroke-linecap="round" 
+                                                    stroke-linejoin="round" 
+                                                    stroke-width="2" 
+                                                    d="M9 18l6-6-6-6"
+                                                />
+                                            </svg>
+                                        </Button>
+                                    </Table.Cell>
                                     <Table.Cell class="font-medium font-mono">
                                         {task.id.slice(-8)}
+                                    </Table.Cell>
+                                    <Table.Cell class="max-w-xs">
+                                        {truncateInput(task.task_input)}
                                     </Table.Cell>
                                     <Table.Cell>
                                         <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
@@ -197,16 +240,64 @@
                                         </span>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {#if task.output}
-                                            <pre class="text-xs text-gray-600 whitespace-pre-wrap">{JSON.stringify(task.output, null, 2)}</pre>
+                                        {new Date(task.created_at).toLocaleString(undefined, {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short'
+                                        })}
+                                    </Table.Cell>
+                                    <Table.Cell>
+                                        {#if task.finished_at}
+                                            {formatDuration(
+                                                intervalToDuration({
+                                                    start: new Date(task.created_at),
+                                                    end: new Date(task.finished_at)
+                                                }),
+                                                { format: ['minutes', 'seconds'] }
+                                            )}
+                                        {:else}
+                                            -
                                         {/if}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {#if task.error}
-                                            <span class="text-red-600 text-sm">{task.error}</span>
+                                        {#if task.eval_score !== undefined}
+                                            {(task.eval_score * 100).toFixed(0)}%
+                                        {:else}
+                                            -
                                         {/if}
                                     </Table.Cell>
                                 </Table.Row>
+                                {#if isExpanded}
+                                    <Table.Row class="bg-gray-50">
+                                        <Table.Cell colspan={7} class="border-t border-gray-100">
+                                            <div class="p-4 space-y-4">
+                                                {#if task.task_input}
+                                                    <div>
+                                                        <h4 class="font-semibold mb-2">Input</h4>
+                                                        <span class="text-xs bg-white p-2 rounded border">{JSON.stringify(task.task_input, null, 2)}</span>
+                                                    </div>
+                                                {/if}
+                                                {#if task.task_output}
+                                                    <div>
+                                                        <h4 class="font-semibold mb-2">Output</h4>
+                                                        <span class="text-xs bg-white p-2 rounded border">{JSON.stringify(task.task_output, null, 2)}</span>
+                                                    </div>
+                                                {/if}
+                                                {#if task.eval_details}
+                                                    <div>
+                                                        <h4 class="font-semibold mb-2">Evaluation Details</h4>
+                                                        <span class="text-xs bg-white p-2 rounded border">{JSON.stringify(task.eval_details, null, 2)}</span    >
+                                                    </div>
+                                                {/if}
+                                                {#if task.error}
+                                                    <div>
+                                                        <h4 class="font-semibold mb-2 text-red-800">Error</h4>
+                                                        <span class="text-xs bg-red-50 text-red-800 p-2 rounded border border-red-200">{task.error}</span>
+                                                    </div>
+                                                {/if}
+                                            </div>
+                                        </Table.Cell>
+                                    </Table.Row>
+                                {/if}
                             {/each}
                         </Table.Body>
                     </Table.Root>
