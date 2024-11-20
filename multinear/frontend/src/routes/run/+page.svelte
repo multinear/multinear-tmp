@@ -1,14 +1,11 @@
 <script lang="ts">
-    // import { onMount } from 'svelte';
     import * as Card from "$lib/components/ui/card";
     import { Button } from "$lib/components/ui/button";
-    // import { page } from '$app/stores';
     import { getRunDetails } from '$lib/api';
     import { selectedRunId } from '$lib/stores/projects';
     import * as Table from "$lib/components/ui/table";
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
-    // import * as Select from "$lib/components/ui/select";
     import { formatDuration, intervalToDuration } from 'date-fns';
 
     let runId: string | null = null;
@@ -63,7 +60,7 @@
         .filter(([_, count]: [any, any]) => count > 0)
         .map(([status]) => status);
 
-    function truncateInput(input: any, maxLength: number = 30): string {
+    function truncateInput(input: any, maxLength: number = 50): string {
         if (!input) return '-';
         
         const text = typeof input === 'object' && 'str' in input 
@@ -192,10 +189,10 @@
                             <Table.Row>
                                 <Table.Head></Table.Head>
                                 <Table.Head>Task ID</Table.Head>
-                                <Table.Head>Input</Table.Head>
-                                <Table.Head>Status</Table.Head>
                                 <Table.Head>Started</Table.Head>
                                 <Table.Head>Duration</Table.Head>
+                                <Table.Head>Input</Table.Head>
+                                <Table.Head>Status</Table.Head>
                                 <Table.Head>Score</Table.Head>
                             </Table.Row>
                         </Table.Header>
@@ -228,17 +225,6 @@
                                     <Table.Cell class="font-medium font-mono">
                                         {task.id.slice(-8)}
                                     </Table.Cell>
-                                    <Table.Cell class="max-w-xs">
-                                        {truncateInput(task.task_input)}
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                        <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            ${task.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                            task.status === 'failed' ? 'bg-red-100 text-red-800' : 
-                                            'bg-gray-100 text-gray-800'}`}>
-                                            {task.status}
-                                        </span>
-                                    </Table.Cell>
                                     <Table.Cell>
                                         {new Date(task.created_at).toLocaleString(undefined, {
                                             dateStyle: 'medium',
@@ -258,6 +244,17 @@
                                             -
                                         {/if}
                                     </Table.Cell>
+                                    <Table.Cell class="max-w-xs">
+                                        {truncateInput(task.task_input)}
+                                    </Table.Cell>
+                                    <Table.Cell>
+                                        <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            ${task.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                            task.status === 'failed' ? 'bg-red-100 text-red-800' : 
+                                            'bg-gray-100 text-gray-800'}`}>
+                                            {task.status}
+                                        </span>
+                                    </Table.Cell>
                                     <Table.Cell>
                                         {#if task.eval_score !== undefined}
                                             {(task.eval_score * 100).toFixed(0)}%
@@ -269,31 +266,96 @@
                                 {#if isExpanded}
                                     <Table.Row class="bg-gray-50">
                                         <Table.Cell colspan={7} class="border-t border-gray-100">
-                                            <div class="p-4 space-y-4">
-                                                {#if task.task_input}
-                                                    <div>
-                                                        <h4 class="font-semibold mb-2">Input</h4>
-                                                        <span class="text-xs bg-white p-2 rounded border">{JSON.stringify(task.task_input, null, 2)}</span>
-                                                    </div>
-                                                {/if}
-                                                {#if task.task_output}
-                                                    <div>
-                                                        <h4 class="font-semibold mb-2">Output</h4>
-                                                        <span class="text-xs bg-white p-2 rounded border">{JSON.stringify(task.task_output, null, 2)}</span>
-                                                    </div>
-                                                {/if}
-                                                {#if task.eval_details}
-                                                    <div>
-                                                        <h4 class="font-semibold mb-2">Evaluation Details</h4>
-                                                        <span class="text-xs bg-white p-2 rounded border">{JSON.stringify(task.eval_details, null, 2)}</span    >
-                                                    </div>
-                                                {/if}
-                                                {#if task.error}
-                                                    <div>
-                                                        <h4 class="font-semibold mb-2 text-red-800">Error</h4>
-                                                        <span class="text-xs bg-red-50 text-red-800 p-2 rounded border border-red-200">{task.error}</span>
-                                                    </div>
-                                                {/if}
+                                            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <!-- Task Details Column -->
+                                                <div class="space-y-4 pr-12 border-r border-gray-200">
+                                                    <h4 class="font-semibold text-lg mb-2">Task</h4>
+                                                    {#if task.task_input}
+                                                        <div>
+                                                            <h5 class="font-semibold mb-1">Input</h5>
+                                                            <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                                {typeof task.task_input === 'object' && 'str' in task.task_input 
+                                                                    ? task.task_input.str 
+                                                                    : JSON.stringify(task.task_input, null, 2)}
+                                                            </div>
+                                                        </div>
+                                                    {/if}
+                                                    {#if task.task_output}
+                                                        <div>
+                                                            <h5 class="font-semibold mb-1">Output</h5>
+                                                            <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                                {typeof task.task_output === 'object' && 'str' in task.task_output 
+                                                                    ? task.task_output.str 
+                                                                    : JSON.stringify(task.task_output, null, 2)}
+                                                            </div>
+                                                        </div>
+                                                    {/if}
+                                                    {#if task.task_details}
+                                                        <div>
+                                                            <h5 class="font-semibold mb-1">Details</h5>
+                                                            <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                                {JSON.stringify(task.task_details, null, 2)}
+                                                            </div>
+                                                        </div>
+                                                    {/if}
+                                                    {#if task.task_logs}
+                                                        <div>
+                                                            <h5 class="font-semibold mb-1">Logs</h5>
+                                                            <details>
+                                                                <summary class="cursor-pointer text-blue-500">Show Logs</summary>
+                                                                <table class="text-sm bg-white p-2 rounded border overflow-auto w-full mt-2">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th class="text-left">Level</th>
+                                                                            <th class="text-left">Timestamp</th>
+                                                                            <th class="text-left">Message</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {#each task.task_logs.logs as log}
+                                                                            <tr>
+                                                                                <td>{log.level}</td>
+                                                                                <td>{new Date(log.timestamp * 1000).toLocaleString()}</td>
+                                                                                <td>{log.message}</td>
+                                                                            </tr>
+                                                                        {/each}
+                                                                    </tbody>
+                                                                </table>
+                                                            </details>
+                                                        </div>
+                                                    {/if}
+                                                </div>
+
+                                                <!-- Evaluation Details Column -->
+                                                <div class="space-y-4 pl-4">
+                                                    <h4 class="font-semibold text-lg mb-2">Evaluation</h4>
+                                                    {#if task.eval_spec}
+                                                        <div>
+                                                            <h5 class="font-semibold mb-1">Spec</h5>
+                                                            {#each Object.entries(task.eval_spec) as [key, value]}
+                                                                <div class="mb-1 pl-2">
+                                                                    <h6 class="font-semibold">{key}</h6>
+                                                                    <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                    </div>
+                                                                </div>
+                                                            {/each}
+                                                        </div>
+                                                    {/if}
+                                                    {#if task.eval_details}
+                                                        <div>
+                                                            <h5 class="font-semibold mb-1">Details</h5>
+                                                            {#each Object.entries(task.eval_details) as [key, value]}
+                                                                <div class="mb-1 pl-2">
+                                                                    <h6 class="font-semibold">{key}</h6>
+                                                                    <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                    </div>
+                                                                </div>
+                                                            {/each}
+                                                        </div>
+                                                    {/if}
+                                                </div>
                                             </div>
                                         </Table.Cell>
                                     </Table.Row>
