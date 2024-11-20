@@ -9,6 +9,14 @@ import uuid
 
 Base = declarative_base()
 
+
+class TaskStatus:
+    STARTING = "starting"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 # Define SQLAlchemy models
 class ProjectModel(Base):
     __tablename__ = "projects"
@@ -58,6 +66,7 @@ class JobModel(Base):
     current_task = Column(Integer, nullable=True)
     details = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    finished_at = Column(DateTime, nullable=True)
     project = relationship("ProjectModel", back_populates="jobs")
     tasks = relationship("TaskModel", back_populates="job")
 
@@ -91,6 +100,17 @@ class JobModel(Base):
             self.current_task = current_task
             self.details = details
 
+    def finish(self, status: str = TaskStatus.COMPLETED):
+        finished_at = datetime.now()
+        with db_context() as db:
+            job = db.query(JobModel).filter(JobModel.id == self.id).one()
+            job.status = status
+            job.finished_at = finished_at
+            db.commit()
+            # Update current instance
+            self.status = status
+            self.finished_at = finished_at
+
     @classmethod
     def list_recent(cls, project_id: str, limit: int = 5, offset: int = 0) -> List["JobModel"]:
         with db_context() as db:
@@ -110,13 +130,6 @@ class JobModel(Base):
                    .first())
 
 
-class TaskStatus:
-    STARTING = "starting"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
 class TaskModel(Base):
     __tablename__ = "tasks"
     
@@ -124,9 +137,13 @@ class TaskModel(Base):
     job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
     task_number = Column(Integer, nullable=False)
     status = Column(String, nullable=False)
-    result = Column(JSON, nullable=True)
     error = Column(String, nullable=True)
+    input = Column(JSON, nullable=True)
+    output = Column(JSON, nullable=True)
+    details = Column(JSON, nullable=True)
+    logs = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    finished_at = Column(DateTime, nullable=True)
     job = relationship("JobModel", back_populates="tasks")
 
     @classmethod
@@ -145,12 +162,16 @@ class TaskModel(Base):
             return task_id
 
     @classmethod
-    def complete(cls, task_id: str, result: dict):
+    def complete(cls, task_id: str, input: any, output: any, details: dict, logs: dict):
         """Mark task as completed with results"""
         with db_context() as db:
             task = db.query(cls).filter(cls.id == task_id).one()
             task.status = TaskStatus.COMPLETED
-            task.result = result
+            task.input = input
+            task.output = output
+            task.details = details
+            task.logs = logs
+            task.finished_at = datetime.now()
             db.commit()
 
     @classmethod
@@ -160,6 +181,7 @@ class TaskModel(Base):
             task = db.query(cls).filter(cls.id == task_id).one()
             task.status = TaskStatus.FAILED
             task.error = error
+            task.finished_at = datetime.now()
             db.commit()
 
     @classmethod

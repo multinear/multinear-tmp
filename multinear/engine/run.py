@@ -5,6 +5,7 @@ import yaml
 import random
 
 from .storage import TaskModel, TaskStatus
+from ..utils.capture import OutputCapture
 
 
 def run_experiment(project_config: Dict[str, Any], job_id: str):
@@ -71,11 +72,12 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
                 fail_simulate = config.get("meta", {}).get("fail_simulate", None)
                 if fail_simulate is not None and random.random() < fail_simulate:
                     raise Exception("Simulated failure")
-
-                result = task_runner_module.run_task(**task)
+                input = task["input"]
+                with OutputCapture() as capture:
+                    result = task_runner_module.run_task(input)
                 results.append(result)
-                TaskModel.complete(task_id, result=result)
-                    
+                TaskModel.complete(task_id, input, result["output"], result["details"], capture.logs)
+
             except Exception as e:
                 error_msg = str(e)
                 print(f"Error running task {current_task}/{total_tasks}: {error_msg}")

@@ -43,7 +43,7 @@
             return (
                 task.id.toLowerCase().includes(search) ||
                 task.status.toLowerCase().includes(search) ||
-                (task.result && JSON.stringify(task.result).toLowerCase().includes(search)) ||
+                (task.output && JSON.stringify(task.output).toLowerCase().includes(search)) ||
                 (task.error && task.error.toLowerCase().includes(search))
             );
         }
@@ -197,8 +197,8 @@
                                         </span>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {#if task.result}
-                                            <pre class="text-xs text-gray-600 whitespace-pre-wrap">{JSON.stringify(task.result, null, 2)}</pre>
+                                        {#if task.output}
+                                            <pre class="text-xs text-gray-600 whitespace-pre-wrap">{JSON.stringify(task.output, null, 2)}</pre>
                                         {/if}
                                     </Table.Cell>
                                     <Table.Cell>

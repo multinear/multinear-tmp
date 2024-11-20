@@ -72,6 +72,8 @@ def background_job(project_id: str, job_id: str):
                 current_task=update.get("current"),
                 details=update
             )
+
+        job.finish()
     except Exception as e:
         print(f"Error running experiment: {e}")
         job = JobModel.find(job_id)
@@ -217,7 +219,7 @@ async def get_run_details(run_id: str):
         TaskDetails(
             id=task.id,
             status=task.status,
-            result={"output": task.result} if type(task.result) == str else task.result,
+            result={"output": task.output} if type(task.output) == str else task.output,
             error=task.error
         ) for task in tasks
     ]
