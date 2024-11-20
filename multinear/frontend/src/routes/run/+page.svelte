@@ -40,12 +40,19 @@
         
         if (searchTerm) {
             const search = searchTerm.toLowerCase();
-            return (
-                task.id.toLowerCase().includes(search) ||
-                task.status.toLowerCase().includes(search) ||
-                (task.output && JSON.stringify(task.output).toLowerCase().includes(search)) ||
-                (task.error && task.error.toLowerCase().includes(search))
-            );
+            // Search through all task fields recursively
+            const searchInObject = (obj: any): boolean => {
+                if (!obj) return false;
+                if (typeof obj === 'string') return obj.toLowerCase().includes(search);
+                if (typeof obj === 'number') return obj.toString().toLowerCase().includes(search);
+                if (Array.isArray(obj)) return obj.some(item => searchInObject(item));
+                if (typeof obj === 'object') {
+                    return Object.values(obj).some(value => searchInObject(value));
+                }
+                return false;
+            };
+            
+            return searchInObject(task);
         }
         
         return true;
