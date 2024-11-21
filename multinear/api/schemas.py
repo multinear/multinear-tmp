@@ -33,6 +33,7 @@ class RecentRun(BaseModel):
 class TaskDetails(BaseModel):
     id: str
     challenge_id: str
+    job_id: str
     status: str
     error: Optional[str] = None
     task_input: Optional[Dict] = None

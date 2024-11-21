@@ -81,7 +81,8 @@ export async function getRunDetails(runId: string): Promise<any> {
     return response.json();
 }
 
-export async function getSameTasks(projectId: string, challengeId: string, limit: number = 10, offset: number = 0): Promise<TaskDetails[]> {
+// TODO: TaskDetails
+export async function getSameTasks(projectId: string, challengeId: string, limit: number = 10, offset: number = 0): Promise<any[]> {
     const response = await fetch(`${API_URL}/same-tasks/${projectId}/${challengeId}?limit=${limit}&offset=${offset}`);
     if (!response.ok) {
         throw new Error(`Failed to fetch same tasks: ${response.statusText}`);

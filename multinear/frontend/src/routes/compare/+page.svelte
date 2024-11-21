@@ -12,6 +12,7 @@
     import { getSameTasks } from '$lib/api';
     import DiffOutput from '$lib/components/DiffOutput.svelte';
     import { selectedProjectId, selectedChallengeId } from '$lib/stores/projects';
+    import { goto } from '$app/navigation';
 
 
     let loading = true;
@@ -196,6 +197,16 @@
                                             <!-- Left column -->
                                             <div class="font-medium text-gray-500 text-sm">ID</div>
                                             <div class="font-mono text-sm">{task.id.slice(-8)}</div>
+
+                                            <div class="font-medium text-gray-500 text-sm">Job</div>
+                                            <div class="font-mono text-sm">
+                                                <button
+                                                    class="text-blue-600 hover:underline"
+                                                    on:click={() => goto(`/experiments#${$selectedProjectId}/search:${task.job_id.slice(-8)}`)}
+                                                >
+                                                    {task.job_id.slice(-8)}
+                                                </button>
+                                            </div>
 
                                             <div class="font-medium text-gray-500 text-sm">Model</div>
                                             <div class="text-sm">{task.task_details.model}</div>

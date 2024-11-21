@@ -163,6 +163,7 @@ async def get_recent_runs(
 def _get_task_details(task: TaskModel):
     return TaskDetails(
         id=task.id,
+        job_id=task.job_id,
         challenge_id=task.challenge_id,
         status=task.status,
         error=task.error,

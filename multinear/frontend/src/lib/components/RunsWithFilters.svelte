@@ -3,6 +3,7 @@
         Loader2,
         AlertCircle,
         // Bookmark,
+        X,
     } from "lucide-svelte";
     import { goto } from '$app/navigation';
 
@@ -26,6 +27,7 @@
     export let loadingError: string | null;
     export let showFilters: boolean = false;
     export let showViewAll: boolean = false;
+    export let initialSearchTerm: string = "";
 
     $: modelVersions = ["", ...new Set(runsList.map(run => run.model))];
     $: codeRevisions = ["", ...new Set(runsList.map(run => run.revision))];
@@ -41,7 +43,14 @@
     let selectedModelVersion: SelectItem = { value: '', label: ''};
     let selectedCodeRevision: SelectItem = { value: '', label: ''};
     let selectedTestGroup: SelectItem = { value: '', label: ''};
-    let searchTerm: string = "";
+    let searchTerm: string = initialSearchTerm;
+
+    // Watch for changes in initialSearchTerm
+    $: {
+        if (initialSearchTerm) {
+            searchTerm = initialSearchTerm;
+        }
+    }
 
     // Add filtered runs reactive statement
     $: filteredRuns = runsList.filter(run => {
@@ -220,11 +229,22 @@
             <!-- Search Input -->
             <div class="flex flex-col space-y-1.5 flex-grow">
                 <Label for="search">Search</Label>
-                <Input
-                    id="search"
-                    placeholder="Search by Run ID, name, or metadata"
-                    bind:value={searchTerm}
-                />
+                <div class="relative">
+                    <Input
+                        id="search"
+                        placeholder="Search by Run ID, name, or metadata"
+                        bind:value={searchTerm}
+                    />
+                    {#if searchTerm}
+                        <button
+                            type="button"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            on:click={() => searchTerm = ""}
+                        >
+                            <X class="h-4 w-4 text-gray-500" />
+                        </button>
+                    {/if}
+                </div>
             </div>
         </Card.Content>
     </Card.Root>
