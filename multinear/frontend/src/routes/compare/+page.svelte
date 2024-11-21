@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
     import * as Card from "$lib/components/ui/card";
     import * as Table from "$lib/components/ui/table";
     import { Label } from "$lib/components/ui/label";
@@ -11,23 +10,21 @@
 
     import { filterTasks, getStatusCounts, getTaskStatus } from '$lib/utils/tasks';
     import { getSameTasks } from '$lib/api';
-    // import type { TaskDetails } from '$lib/api';
     import DiffOutput from '$lib/components/DiffOutput.svelte';
+    import { selectedProjectId, selectedChallengeId } from '$lib/stores/projects';
 
-
-    let projectId: string | null = null;
-    let challengeId: string | null = null;
 
     let loading = true;
     let error: string | null = null;
     let tasks: any[] = [];
-    //TaskDetails[] = [];
 
     async function loadTasks() {
+        if (!$selectedProjectId || !$selectedChallengeId) return;
+        
         loading = true;
         error = null;
         try {
-            tasks = await getSameTasks(projectId!, challengeId!);
+            tasks = await getSameTasks($selectedProjectId, $selectedChallengeId);
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to load tasks";
         } finally {
@@ -35,13 +32,12 @@
         }
     }
 
-    onMount(() => {
-        projectId = 'demo-bank-customer-support';
-        challengeId = 'c44f74c212b1163506b411cf5e165e0cf7883eb23bf8b122c857baa32e1c055b';
-
-        loadTasks();
-    });
-
+    // Watch for changes in project ID or challenge ID
+    $: {
+        if ($selectedProjectId && $selectedChallengeId) {
+            loadTasks();
+        }
+    }
 
     let statusFilter = "";
     let searchTerm = "";

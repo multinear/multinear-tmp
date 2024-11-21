@@ -7,7 +7,7 @@
 	import { Book } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { getProjects } from '$lib/api';
-	import { projects, projectsLoading, projectsError, selectedProjectId } from '$lib/stores/projects';
+	import { projects, projectsLoading, projectsError, selectedProjectId, selectedChallengeId } from '$lib/stores/projects';
 	import { page } from '$app/stores';
 	import { setupHashChangeHandler } from '$lib/stores/projects';
 	import { afterNavigate } from '$app/navigation';
@@ -27,7 +27,13 @@
 		}
 		if (pathname.startsWith('/run')) {
 			links.push({ href: pathname + $page.url.hash, label: 'Run' });
-		}		
+		}
+		if (pathname.startsWith('/compare') || $selectedChallengeId) {
+			links.push({ 
+				href: `/compare#${$selectedProjectId}/c:${$selectedChallengeId}`, 
+				label: 'Compare' 
+			});
+		}
 		return links;
 	});
 

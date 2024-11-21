@@ -11,6 +11,7 @@
     import TimeAgo from '$lib/components/TimeAgo.svelte';
     import StatusFilter from '$lib/components/StatusFilter.svelte';
     import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
+    import { goto } from '$app/navigation';
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -243,7 +244,21 @@
                                                     {/if}
                                                     {#if task.task_output}
                                                         <div>
-                                                            <h5 class="font-semibold mb-1">Output</h5>
+                                                            <div class="flex justify-between items-center mb-1">
+                                                                <h5 class="font-semibold">Output</h5>
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    size="sm"
+                                                                    class="text-sm"
+                                                                    on:click={() => {
+                                                                        const projectId = runDetails.project.id;
+                                                                        const challengeId = task.challenge_id;
+                                                                        goto(`/compare#${projectId}/c:${challengeId}`);
+                                                                    }}
+                                                                >
+                                                                    Cross-Compare
+                                                                </Button>
+                                                            </div>
                                                             <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
                                                                 {typeof task.task_output === 'object' && 'str' in task.task_output 
                                                                     ? task.task_output.str 

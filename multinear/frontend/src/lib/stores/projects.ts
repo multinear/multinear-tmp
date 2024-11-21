@@ -6,6 +6,7 @@ export const projectsLoading = writable(true);
 export const projectsError = writable<string | null>(null);
 export const selectedProjectId = writable<string>('');
 export const selectedRunId = writable<string>('');
+export const selectedChallengeId = writable<string>('');
 
 export function handlePageHashChange() {
     const hash = window.location.hash;
@@ -14,10 +15,14 @@ export function handlePageHashChange() {
     const projectId = parts[0] || '';
     selectedProjectId.set(projectId);
     
-    const runId = parts[1]?.startsWith('r:') ? parts[1].slice(2) : '';
-    selectedRunId.set(runId);
+    const secondPart = parts[1] || '';
+    const runId = secondPart.startsWith('r:') ? secondPart.slice(2) : '';
+    const challengeId = secondPart.startsWith('c:') ? secondPart.slice(2) : '';
     
-    return { projectId, runId };
+    selectedRunId.set(runId);
+    selectedChallengeId.set(challengeId);
+    
+    return { projectId, runId, challengeId };
 }
 
 export function setupHashChangeHandler() {
