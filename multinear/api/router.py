@@ -115,50 +115,50 @@ async def get_job_status(project_id: str, job_id: str):
         details=details
     )
 
-def _generate_fake_run(job_id: str, job_data: dict, created_at: datetime) -> dict:
-    total = random.randint(450, 550)
-    passed = int(total * random.uniform(0.75, 0.95))
-    failed = int(total * random.uniform(0.03, 0.15))
-    regression = total - passed - failed
+# def _generate_fake_run(job_id: str, job_data: dict, created_at: datetime) -> dict:
+#     total = random.randint(450, 550)
+#     passed = int(total * random.uniform(0.75, 0.95))
+#     failed = int(total * random.uniform(0.03, 0.15))
+#     regression = total - passed - failed
     
-    models = ["gpt4o", "sonnet-3.5", "gpt4o-mini", "haiku-3.5"]
+#     models = ["gpt4o", "sonnet-3.5", "gpt4o-mini", "haiku-3.5"]
     
-    # Use actual job data where available
-    status = job_data.get("status", "unknown")
-    task_status_map = job_data.get("status_map", {})
+#     # Use actual job data where available
+#     status = job_data.get("status", "unknown")
+#     task_status_map = job_data.get("status_map", {})
     
-    # Calculate actual stats if available
-    if task_status_map:
-        total = len(task_status_map)
-        passed = sum(1 for status in task_status_map.values() if status == TaskStatus.COMPLETED)
-        failed = sum(1 for status in task_status_map.values() if status == TaskStatus.FAILED)
-        regression = total - passed - failed
+#     # Calculate actual stats if available
+#     if task_status_map:
+#         total = len(task_status_map)
+#         passed = sum(1 for status in task_status_map.values() if status == TaskStatus.COMPLETED)
+#         failed = sum(1 for status in task_status_map.values() if status == TaskStatus.FAILED)
+#         regression = total - passed - failed
     
-    # Use actual timestamp if available, otherwise generate fake
-    if isinstance(created_at, int):
-        created_at = datetime.now() - timedelta(hours=random.randint(0, 23), 
-                                                minutes=random.randint(0, 59))
+#     # Use actual timestamp if available, otherwise generate fake
+#     if isinstance(created_at, int):
+#         created_at = datetime.now() - timedelta(hours=random.randint(0, 23), 
+#                                                 minutes=random.randint(0, 59))
     
-    # Calculate score based on actual results if available
-    if total > 0:
-        score = (passed / total) * random.uniform(0.95, 1.05)  # Add some randomness
-        score = max(0.0, min(1.0, score))  # Clamp between 0 and 1
-    else:
-        score = random.uniform(0.75, 0.98)
+#     # Calculate score based on actual results if available
+#     if total > 0:
+#         score = (passed / total) * random.uniform(0.95, 1.05)  # Add some randomness
+#         score = max(0.0, min(1.0, score))  # Clamp between 0 and 1
+#     else:
+#         score = random.uniform(0.75, 0.98)
     
-    return {
-        "id": job_id,
-        "date": created_at.replace(tzinfo=timezone.utc).isoformat(),
-        "revision": job_data.get("revision", hex(random.randint(0, 16**8))[2:].zfill(8)),
-        "model": job_data.get("model", random.choice(models)),
-        "score": score,
-        "totalTests": total,
-        "pass": passed,
-        "fail": failed,
-        "regression": regression,
-        "bookmarked": random.random() < 0.2,
-        "noted": random.random() < 0.2
-    }
+#     return {
+#         "id": job_id,
+#         "date": created_at.replace(tzinfo=timezone.utc).isoformat(),
+#         "revision": job_data.get("revision", hex(random.randint(0, 16**8))[2:].zfill(8)),
+#         "model": job_data.get("model", random.choice(models)),
+#         "score": score,
+#         "totalTests": total,
+#         "pass": passed,
+#         "fail": failed,
+#         "regression": regression,
+#         "bookmarked": random.random() < 0.2,
+#         "noted": random.random() < 0.2
+#     }
 
 @api_router.get("/runs/{project_id}", response_model=List[RecentRun])
 async def get_recent_runs(
@@ -174,13 +174,34 @@ async def get_recent_runs(
     runs = []
     for job in recent_jobs:
         job_data = job.details or {}
-        run = _generate_fake_run(job.id, job_data, job.created_at)
-        runs.append(run)
-    
-    # If we have fewer than 5 runs from real data, add some fake ones
-    while len(runs) < 5:
-        fake_id = f"RUN-{str(len(runs) + 1).zfill(3)}"
-        runs.append(_generate_fake_run(fake_id, {}, len(runs)))
+        # run = _generate_fake_run(job.id, job_data, job.created_at)
+        # runs.append(run)
+        model = "aaa"
+
+        total = passed = failed = regression = score = 0
+        task_status_map = job_data.get("status_map", {})
+        if task_status_map:
+            total = len(task_status_map)
+            passed = sum(1 for status in task_status_map.values() if status == TaskStatus.COMPLETED)
+            failed = sum(1 for status in task_status_map.values() if status == TaskStatus.FAILED)
+            regression = total - passed - failed
+            if total > 0:
+                score = (passed / total)
+
+        runs.append({
+            "id": job.id,
+            "date": job.created_at.replace(tzinfo=timezone.utc).isoformat(),
+            # "status": job.status,
+            "revision": job_data.get("revision", ""),
+            "model": model,
+            "score": score,
+            "totalTests": total,
+            "pass": passed,
+            "fail": failed,
+            "regression": regression,
+            # "bookmarked": False,
+            # "noted": False
+        })
     
     return runs
 
