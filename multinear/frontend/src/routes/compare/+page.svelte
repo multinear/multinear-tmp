@@ -12,6 +12,7 @@
     import { filterTasks, getStatusCounts, getTaskStatus } from '$lib/utils/tasks';
     import { getSameTasks } from '$lib/api';
     // import type { TaskDetails } from '$lib/api';
+    import DiffOutput from '$lib/components/DiffOutput.svelte';
 
 
     let projectId: string | null = null;
@@ -45,12 +46,38 @@
     let statusFilter = "";
     let searchTerm = "";
     let selectedTasks: Set<string> = new Set();
+    let selectedFilter = false;
 
-    $: filteredTasks = filterTasks(tasks, statusFilter, searchTerm);
+    // Watch for changes in selectedTasks
+    $: {
+        // When exactly 2 tasks are selected, switch to selected filter
+        if (selectedTasks.size === 2) {
+            selectedFilter = true;
+            statusFilter = "";
+        }
+    }
+
+    $: selectedTasksArray = Array.from(selectedTasks);
+    $: isComparingTwo = selectedTasksArray.length === 2;
+    $: comparisonTasks = isComparingTwo ? 
+        tasks.filter(t => selectedTasks.has(t.id)) : [];
+
+    $: filteredTasks = filterTasks(
+        tasks, 
+        statusFilter, 
+        searchTerm,
+        selectedFilter ? Array.from(selectedTasks) : null
+    );
     $: statusCounts = getStatusCounts(tasks);
     
     // Assuming all tasks have the same input since they're from the same challenge
     $: commonInput = tasks?.[0]?.task_input;
+
+    function getTaskOutput(task: any): string {
+        return typeof task.task_output === 'object' && 'str' in task.task_output 
+            ? task.task_output.str 
+            : JSON.stringify(task.task_output, null, 2);
+    }
 </script>
 
 <div class="container mx-auto p-4">
@@ -99,8 +126,10 @@
                             
                             <StatusFilter 
                                 bind:statusFilter
+                                bind:selectedFilter
                                 statusCounts={statusCounts}
                                 totalCount={tasks.length}
+                                selectedCount={selectedTasks.size}
                             />
                         </div>
                     </Card.Description>
@@ -114,7 +143,16 @@
                         <Table.Header>
                             <Table.Row>
                                 <Table.Head class="w-[50px]">
-                                    <Checkbox />
+                                    <Checkbox disabled={true}
+                                        checked={selectedTasks.size === filteredTasks.length}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                selectedTasks = new Set(filteredTasks.map(t => t.id));
+                                            } else {
+                                                selectedTasks = new Set();
+                                            }
+                                        }}
+                                    />
                                 </Table.Head>
                                 <Table.Head class="w-[50%]">Output</Table.Head>
                                 <Table.Head>Details</Table.Head>
@@ -123,10 +161,13 @@
                         <Table.Body>
                             {#each filteredTasks as task}
                                 {@const {isPassed, statusClass} = getTaskStatus(task)}
-                                <Table.Row class={statusClass}>
+                                {@const isSelected = selectedTasks.has(task.id)}
+                                <Table.Row 
+                                    class={`${statusClass} ${selectedTasks.size === 2 && !isSelected ? 'opacity-50' : ''}`}
+                                >
                                     <Table.Cell>
                                         <Checkbox 
-                                            checked={selectedTasks.has(task.id)}
+                                            checked={isSelected}
                                             onCheckedChange={(checked) => {
                                                 if (checked) {
                                                     selectedTasks.add(task.id);
@@ -138,11 +179,21 @@
                                         />
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <div class="text-sm bg-white p-2 rounded border overflow-auto">
-                                            {typeof task.task_output === 'object' && 'str' in task.task_output 
-                                                ? task.task_output.str 
-                                                : JSON.stringify(task.task_output, null, 2)}
-                                        </div>
+                                        {#if isComparingTwo && isSelected}
+                                            {@const otherTask = comparisonTasks.find(t => t.id !== task.id)}
+                                            {#if otherTask}
+                                                <DiffOutput 
+                                                    text1={getTaskOutput(task)}
+                                                    text2={getTaskOutput(otherTask)}
+                                                />
+                                            {/if}
+                                        {:else}
+                                            <div class="text-sm bg-white p-2 rounded border overflow-auto">
+                                                {typeof task.task_output === 'object' && 'str' in task.task_output 
+                                                    ? task.task_output.str 
+                                                    : JSON.stringify(task.task_output, null, 2)}
+                                            </div>
+                                        {/if}
                                     </Table.Cell>
                                     <Table.Cell>
                                         <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 items-center">

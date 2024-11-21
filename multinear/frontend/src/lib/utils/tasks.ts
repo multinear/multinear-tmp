@@ -19,10 +19,20 @@ export function truncateInput(input: any, maxLength: number = 50): string {
         : text;
 }
 
-export function filterTasks(tasks: any[], statusFilter: string, searchTerm: string) {
+export function filterTasks(
+    tasks: any[], 
+    statusFilter: string, 
+    searchTerm: string,
+    selectedIds: string[] | null = null
+) {
     return tasks?.filter((task: any) => {
+        // Filter by selected tasks if selectedIds is provided
+        if (selectedIds !== null && !selectedIds.includes(task.id)) return false;
+        
+        // Filter by status if specified
         if (statusFilter && task.status !== statusFilter) return false;
         
+        // Filter by search term if specified
         if (searchTerm) {
             const search = searchTerm.toLowerCase();
             return searchInObject(search, task);
