@@ -130,6 +130,27 @@ class JobModel(Base):
                    .filter(cls.id == job_id, cls.project_id == project_id)
                    .first())
 
+    def get_model_summary(self) -> str:
+        """Get a summary of models used in this job's tasks"""
+        with db_context() as db:
+            tasks = db.query(TaskModel).filter(TaskModel.job_id == self.id).all()
+            
+            # Collect unique models from task details
+            models = set()
+            for task in tasks:
+                if task.task_details and 'model' in task.task_details:
+                    models.add(task.task_details['model'])
+            
+            # Return appropriate summary based on number of unique models
+            if len(models) == 0:
+                return "unknown"
+            elif len(models) == 1:
+                return models.pop()
+            elif len(models) == 2:
+                return " + ".join(sorted(models))
+            else:
+                return "multiple"
+
 
 class TaskModel(Base):
     __tablename__ = "tasks"
