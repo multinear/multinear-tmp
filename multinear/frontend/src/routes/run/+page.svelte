@@ -6,7 +6,7 @@
     import * as Table from "$lib/components/ui/table";
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
-    import { formatDuration, intervalToDuration, formatDistanceToNow } from 'date-fns';
+    import { formatDuration, intervalToDuration } from 'date-fns';
     import { ChevronRight } from 'lucide-svelte';
     import TimeAgo from '$lib/components/TimeAgo.svelte';
 
@@ -83,13 +83,20 @@
 </script>
 
 <div class="container mx-auto p-4">
-    <div class="flex gap-12 items-center mb-4">
-        <h1 class="text-3xl font-bold">Run: {$selectedRunId.slice(-8)}</h1>
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-12 items-center">
+            <h1 class="text-3xl font-bold">Run: {$selectedRunId.slice(-8)}</h1>
+            {#if runDetails}
+                <span class="text-xl text-gray-500">
+                    <TimeAgo date={runDetails.date} />
+                </span>
+            {/if}
+        </div>
         {#if runDetails}
-            <span class="text-xl text-gray-500">
-                <!-- {formatDistanceToNow(new Date(runDetails.date), { addSuffix: true }).replace("about ", "~")} -->
-                <TimeAgo date={runDetails.date} />
-            </span>
+            <div class="flex gap-2 items-center">
+                <span class="text-sm text-gray-500">Project</span>
+                <span class="text-md text-gray-800">{runDetails.project.name}</span>
+            </div>
         {/if}
     </div>
 
@@ -114,20 +121,20 @@
             </Card.Footer>
         </Card.Root>
     {:else if runDetails}
-        <div class="space-y-8">
+        <div class="space-y-6">
             <!-- Summary Card -->
-            <Card.Root class="pb-8">
+            <Card.Root class="pb-4">
                 <Card.Header>
                     <Card.Description>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div class="space-y-1">
                                 <div class="text-sm text-gray-500">Status</div>
                                 <div class="font-semibold">{runDetails.status}</div>
                             </div>
-                            <div class="space-y-1">
+                            <!-- <div class="space-y-1">
                                 <div class="text-sm text-gray-500">Project</div>
                                 <div class="font-semibold">{runDetails.project.name}</div>
-                            </div>
+                            </div> -->
                             <div class="space-y-1">
                                 <div class="text-sm text-gray-500">Total Tasks</div>
                                 <div class="font-semibold">{runDetails.tasks.length}</div>
@@ -136,11 +143,20 @@
                                 <div class="text-sm text-gray-500">Model</div>
                                 <div class="font-semibold">{runDetails.details.model || 'N/A'}</div>
                             </div>
+
+                            <div class="space-y-1">
+                                <Label for="search">Search</Label>
+                                <Input
+                                    id="search"
+                                    placeholder="Search tasks..."
+                                    bind:value={searchTerm}
+                                />
+                            </div>
                         </div>
                         
                         <!-- Filters Row -->
-                        <div class="flex gap-8 mt-6 items-end">
-                            {#if availableStatuses.length > 1}
+                        <div class="flex gap-8 items-end">
+                            {#if availableStatuses.length > 1 && runDetails.tasks.length >= 5}
                                 <div class="flex flex-col space-y-1.5">
                                     <Label>Filter</Label>
                                     <div class="flex gap-2">
@@ -176,14 +192,7 @@
                                 </div>
                             {/if}
                             
-                            <div class="flex flex-col space-y-1.5 flex-grow">
-                                <Label for="search">Search</Label>
-                                <Input
-                                    id="search"
-                                    placeholder="Search tasks..."
-                                    bind:value={searchTerm}
-                                />
-                            </div>
+                            <!-- <div class="flex flex-col space-y-1.5 flex-grow"> -->
                         </div>
                     </Card.Description>
                 </Card.Header>
@@ -191,9 +200,9 @@
 
             <!-- Tasks Table -->
             <Card.Root>
-                <Card.Header>
+                <!-- <Card.Header>
                     <Card.Title>Tasks</Card.Title>
-                </Card.Header>
+                </Card.Header> -->
                 <Card.Content>
                     <Table.Root>
                         <Table.Header>
@@ -212,7 +221,8 @@
                             {#each filteredTasks as task}
                                 {@const isExpanded = expandedTaskId === task.id}
                                 <Table.Row 
-                                    class={`cursor-pointer ${isExpanded ? 'bg-gray-200 hover:bg-gray-200' : ''}`}
+                                    class={`cursor-pointer ${task.eval_passed ? 
+                                        'bg-green-50 hover:bg-green-100' : 'bg-red-100 hover:bg-red-200'}`}
                                     on:click={() => expandedTaskId = isExpanded ? null : task.id}
                                 >
                                     <Table.Cell class="w-4">
