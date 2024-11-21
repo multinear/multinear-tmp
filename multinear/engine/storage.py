@@ -157,6 +157,7 @@ class TaskModel(Base):
     
     id = Column(String, primary_key=True, index=True)
     job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
+    challenge_id = Column(String, nullable=False)
     task_number = Column(Integer, nullable=False)
     status = Column(String, nullable=False)
     error = Column(String, nullable=True)
@@ -176,7 +177,7 @@ class TaskModel(Base):
     job = relationship("JobModel", back_populates="tasks")
 
     @classmethod
-    def start(cls, job_id: str, task_number: int) -> str:
+    def start(cls, job_id: str, task_number: int, challenge_id: str) -> str:
         """Start a new task and return its ID"""
         task_id = str(uuid.uuid4())
         with db_context() as db:
@@ -184,7 +185,8 @@ class TaskModel(Base):
                 id=task_id,
                 job_id=job_id,
                 task_number=task_number,
-                status=TaskStatus.RUNNING
+                status=TaskStatus.RUNNING,
+                challenge_id=challenge_id
             )
             db.add(task)
             db.commit()

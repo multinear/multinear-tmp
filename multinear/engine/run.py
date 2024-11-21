@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Dict, Any
 import yaml
 import random
+import hashlib
+import json
 
 from .storage import TaskModel, TaskStatus
 from .evaluate import evaluate
@@ -56,13 +58,19 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
         for i, task in enumerate(config["tasks"]):
             current_task = i + 1
 
-            # Start new task
-            task_id = TaskModel.start(
-                job_id=job_id,
-                task_number=current_task
-            )
-
             try:
+                input = task["input"]
+                challenge_id = task.get("id", None)
+                if not challenge_id: # Calculate challenge ID from input
+                    challenge_id = hashlib.sha256(json.dumps(input).encode()).hexdigest()
+
+                # Start new task
+                task_id = TaskModel.start(
+                    job_id=job_id,
+                    task_number=current_task,
+                    challenge_id=challenge_id
+                )
+
                 yield {
                     "status": TaskStatus.RUNNING,
                     "current": current_task,
@@ -76,7 +84,6 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
                     raise Exception("Simulated failure")
 
                 # Run the task
-                input = task["input"]
                 with OutputCapture() as capture:
                     task_result = task_runner_module.run_task(input)
                 TaskModel.executed(

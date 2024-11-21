@@ -18,7 +18,8 @@ export interface JobResponse {
 
 export interface RecentRun {
     id: string;
-    date: string;
+    created_at: string;
+    finished_at?: string;
     revision: string;
     model: string;
     score: number;

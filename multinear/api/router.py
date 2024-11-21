@@ -144,7 +144,8 @@ async def get_recent_runs(
 
         runs.append({
             "id": job.id,
-            "date": job.created_at.replace(tzinfo=timezone.utc).isoformat(),
+            "created_at": job.created_at.replace(tzinfo=timezone.utc).isoformat(),
+            "finished_at": job.finished_at.replace(tzinfo=timezone.utc).isoformat() if job.finished_at else None,
             # "status": job.status,
             "revision": job_data.get("revision", ""),
             "model": model,

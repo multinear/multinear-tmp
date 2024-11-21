@@ -18,7 +18,6 @@ class JobDetails(BaseModel):
 
 class RecentRun(BaseModel):
     id: str
-    date: str
     revision: str
     model: str
     score: float
@@ -28,6 +27,8 @@ class RecentRun(BaseModel):
     regression: int
     bookmarked: Optional[bool] = False
     noted: Optional[bool] = False
+    created_at: str
+    finished_at: Optional[str] = None
 
 class TaskDetails(BaseModel):
     id: str

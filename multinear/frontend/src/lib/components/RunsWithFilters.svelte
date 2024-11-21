@@ -18,6 +18,7 @@
     import type { RecentRun } from "$lib/api";
     import { selectedProjectId } from "$lib/stores/projects";
     import TimeAgo from "$lib/components/TimeAgo.svelte";
+    import { formatDuration, intervalToDuration } from 'date-fns';
 
     // Props passed from the parent component
     export let runsList: RecentRun[];
@@ -46,7 +47,7 @@
     $: filteredRuns = runsList.filter(run => {
         // Date range filter
         if (selectedDateRange?.value) {
-            const runDate = new Date(run.date);
+            const runDate = new Date(run.created_at);
             const today = new Date();
             switch (selectedDateRange.value) {
                 case "today":
@@ -262,6 +263,7 @@
                     <Table.Row>
                         <Table.Head>Run ID</Table.Head>
                         <Table.Head>Date & Time</Table.Head>
+                        <Table.Head>Duration</Table.Head>
                         <Table.Head>Code Revision</Table.Head>
                         <Table.Head>Model Version</Table.Head>
                         <Table.Head>Total Tests</Table.Head>
@@ -282,7 +284,20 @@
                                 </Tooltip.Root>
                             </Table.Cell>
                             <Table.Cell>
-                                <TimeAgo date={run.date} />
+                                <TimeAgo date={run.created_at} />
+                            </Table.Cell>
+                            <Table.Cell>
+                                {#if run.finished_at}
+                                    {formatDuration(
+                                        intervalToDuration({
+                                            start: new Date(run.created_at),
+                                            end: new Date(run.finished_at)
+                                        }),
+                                        { format: ['minutes', 'seconds'] }
+                                    )}
+                                {:else}
+                                    -
+                                {/if}
                             </Table.Cell>
                             <Table.Cell>{run.revision}</Table.Cell>
                             <Table.Cell>{run.model}</Table.Cell>

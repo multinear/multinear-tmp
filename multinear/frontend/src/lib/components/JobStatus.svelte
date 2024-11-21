@@ -8,7 +8,7 @@
     <div class="border rounded-lg p-4 bg-gray-50">
         <div class="flex items-center gap-4">
             <span class="font-medium">Latest Run:</span>
-            <span>{$jobStore.currentJob}</span>
+            <span>{$jobStore.currentJob.slice(-8)}</span>
             <span class={`text-gray-500 ${$jobStore.jobStatus === 'failed' ? 'text-red-500' : ''}`}>
                 Status: {$jobStore.jobStatus}
             </span>
