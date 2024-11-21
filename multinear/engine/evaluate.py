@@ -1,13 +1,4 @@
-from .checklist import ChecklistClassifier
-
-                # result = loop.run_until_complete(run_test(company_name, test_case))
-                
-                # input_case = result['input']
-                # answer = result['answer']
-                # passed = result['passed']
-                # score = result['score']
-                # metadata = result['metadata']
-
+from .checklist import ChecklistClassifier2
 
 
 def evaluate(spec: dict, input: any, output: any):
@@ -17,7 +8,7 @@ def evaluate(spec: dict, input: any, output: any):
 
     evaluator = None
     if 'checklist' in spec:
-        evaluator = ChecklistClassifier()
+        evaluator = ChecklistClassifier2()
         result = evaluator(output, spec['checklist'], input=input)
     else:
         raise ValueError("No evaluator specified")

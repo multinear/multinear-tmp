@@ -1,6 +1,10 @@
 import yaml
 from autoevals.llm import LLMClassifier
 
+import json
+from autoevals.llm import OpenAILLMClassifier, DEFAULT_MODEL
+from braintrust_core.score import Score
+
 
 class CustomClassifier(LLMClassifier):
     prompt = ""  # Placeholder to be overridden in subclasses
@@ -46,3 +50,107 @@ choice_scores:
   "C": 1
   "D": 0
 """
+
+
+class ChecklistClassifier2(OpenAILLMClassifier):
+    """
+    Evaluate each item in a checklist individually with detailed scoring and rationale.
+    Uses function calling to get structured feedback on each checklist criterion.
+    """
+    
+    def __init__(self, model=DEFAULT_MODEL, **kwargs):
+        messages = [
+            {
+                "role": "system",
+                "content": """You are an expert evaluator assessing answers against specific criteria. 
+For each checklist item, carefully evaluate if the submission meets the criterion and provide a detailed rationale."""
+            },
+            {
+                "role": "user",
+                "content": """Please evaluate this submission against each checklist item:
+
+Question: {{input}}
+
+Checklist:
+{{expected}}
+
+Submission: {{output}}
+
+Evaluate each checklist item individually, providing a score and detailed rationale."""
+            }
+        ]
+
+        # Schema for evaluating each checklist item
+        checklist_eval_schema = {
+            "type": "object",
+            "properties": {
+                "evaluations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "criterion": {"type": "string", "description": "The checklist item being evaluated"},
+                            "score": {"type": "number", "minimum": 0, "maximum": 1, "description": "Score between 0 and 1"},
+                            "rationale": {"type": "string", "description": "Detailed explanation for the score"}
+                        },
+                        "required": ["criterion", "score", "rationale"]
+                    }
+                },
+                "overall_score": {"type": "number", "description": "Average score across all criteria"}
+            },
+            "required": ["evaluations", "overall_score"]
+        }
+
+        tools = [{
+            "type": "function",
+            "function": {
+                "name": "evaluate_checklist",
+                "description": "Evaluate each checklist item and provide detailed scoring",
+                "parameters": checklist_eval_schema
+            }
+        }]
+
+        super().__init__(
+            name="ChecklistClassifier2",
+            messages=messages,
+            model=model,
+            classification_tools=tools,
+            choice_scores={"evaluate_checklist": 1},  # Required by parent class
+            **kwargs
+        )
+
+    def _process_response(self, resp):
+        """Process the function call response and calculate the final score"""
+        if "tool_calls" not in resp:
+            raise ValueError("No tool call found in response")
+            
+        tool_call = resp["tool_calls"][0]
+        if tool_call["function"]["name"] != "evaluate_checklist":
+            raise ValueError(f"Unexpected tool call ({tool_call['function']['name']}) found in response")
+            
+        result = json.loads(tool_call["function"]["arguments"])
+        
+        return Score(
+            name=self.name,
+            score=result["overall_score"],
+            metadata={
+                "evaluations": result["evaluations"],
+                "overall_score": result["overall_score"]
+            }
+        )
+
+    def _build_args(self, output, expected, **kwargs):
+        # Parse the YAML checklist if it's provided as a string
+        if isinstance(expected, str):
+            try:
+                expected = yaml.safe_load(expected)
+            except yaml.YAMLError as e:
+                raise ValueError(f"Invalid YAML checklist: {e}")
+
+        # Convert list to YAML string for template rendering
+        if isinstance(expected, list):
+            expected = yaml.dump(expected)
+
+        args = super()._build_args(output=output, expected=expected, **kwargs)
+        args["tool_choice"] = {"type": "function", "function": {"name": "evaluate_checklist"}}
+        return args
