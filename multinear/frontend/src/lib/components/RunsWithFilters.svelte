@@ -188,7 +188,7 @@
             </div>
             
             <!-- Test Group Filter -->
-            <div class="flex flex-col space-y-1.5">
+            <!-- <div class="flex flex-col space-y-1.5">
                 <Label for="test-group">Test Group</Label>
                 <Select.Root
                     selected={selectedTestGroup}
@@ -214,7 +214,7 @@
                         </Select.Group>
                     </Select.Content>
                 </Select.Root>
-            </div>
+            </div> -->
             
             <!-- Search Input -->
             <div class="flex flex-col space-y-1.5 flex-grow">
@@ -298,19 +298,21 @@
                                     {run.score.toFixed(2)}
                                 </Badge>
                             </Table.Cell>
-                            <Table.Cell>
+                            <Table.Cell class="w-[300px]">
                                 <Tooltip.Root>
                                     <Tooltip.Trigger class="w-full">
                                         <div
                                             class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex"
                                         >
-                                            <div
-                                                class="bg-green-600 h-4 min-w-[5px]"
-                                                style="width: {(run.pass / run.totalTests) * 100}%"
-                                            ></div>
+                                            {#if run.pass > 0}
+                                                <div
+                                                    class="bg-green-600 h-4 min-w-[5px]"
+                                                    style="width: {(run.pass / run.totalTests) * 100}%"
+                                                ></div>
+                                            {/if}
                                             {#if run.fail > 0}
-                                            <div
-                                                class="bg-red-600 h-4 min-w-[5px]"
+                                                <div
+                                                    class="bg-red-600 h-4 min-w-[5px]"
                                                     style="width: {(run.fail / run.totalTests) * 100}%"
                                                 ></div>
                                             {/if}

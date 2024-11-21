@@ -204,7 +204,7 @@
                     <Card.Title>Tasks</Card.Title>
                 </Card.Header> -->
                 <Card.Content>
-                    <Table.Root>
+                    <Table.Root class="-mt-4">
                         <Table.Header>
                             <Table.Row>
                                 <Table.Head></Table.Head>

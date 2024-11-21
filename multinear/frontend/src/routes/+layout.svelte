@@ -79,10 +79,10 @@
 				{/each}
 			</div>
 			<!-- Right side: Search and Login -->
-			<div class="flex items-center space-x-4">
+			<!-- <div class="flex items-center space-x-4">
 				<Input type="search" placeholder="Search..." class="h-9 md:w-[100px] lg:w-[300px]" />
-				<!-- <NavLink href="/settings" label="Settings" /> -->
-			</div>
+				<NavLink href="/settings" label="Settings" />
+			</div> -->
 		</div>
 	</nav>
 
