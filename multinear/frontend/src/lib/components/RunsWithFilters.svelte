@@ -325,10 +325,10 @@
                             <Table.Cell>
                                 <Badge
                                     variant={run.score >= 0.9
-                                        ? "default"
-                                        : run.score >= 0.8
-                                          ? "outline"
-                                          : "destructive"}
+                                        ? "success"
+                                        : run.score >= 0.7
+                                            ? "warning"
+                                            : "destructive"}
                                 >
                                     {run.score.toFixed(2)}
                                 </Badge>
