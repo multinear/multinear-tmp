@@ -102,7 +102,7 @@ class JobModel(Base):
             self.details = details
 
     def finish(self, status: str = TaskStatus.COMPLETED):
-        finished_at = datetime.now()
+        finished_at = datetime.now(timezone.utc)
         with db_context() as db:
             job = db.query(JobModel).filter(JobModel.id == self.id).one()
             job.status = status
@@ -202,7 +202,7 @@ class TaskModel(Base):
             task.task_output = output
             task.task_details = details
             task.task_logs = logs
-            task.executed_at = datetime.now()
+            task.executed_at = datetime.now(timezone.utc)
             db.commit()
 
     @classmethod
@@ -216,7 +216,7 @@ class TaskModel(Base):
             task.eval_score = score
             task.eval_details = details
             task.eval_logs = logs
-            task.evaluated_at = task.finished_at = datetime.now()
+            task.evaluated_at = task.finished_at = datetime.now(timezone.utc)
             db.commit()
 
     @classmethod
@@ -226,7 +226,7 @@ class TaskModel(Base):
             task = db.query(cls).filter(cls.id == task_id).one()
             task.status = TaskStatus.FAILED
             task.error = error
-            task.finished_at = datetime.now()
+            task.finished_at = datetime.now(timezone.utc)
             db.commit()
 
     @classmethod
