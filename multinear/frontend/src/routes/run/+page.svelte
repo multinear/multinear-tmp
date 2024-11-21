@@ -12,6 +12,7 @@
     import StatusFilter from '$lib/components/StatusFilter.svelte';
     import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
     import { goto } from '$app/navigation';
+    import { tick } from 'svelte';
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -41,7 +42,68 @@
     
     $: filteredTasks = filterTasks(runDetails?.tasks || [], statusFilter, searchTerm);
     $: statusCounts = getStatusCounts(runDetails?.tasks || []);
+
+    async function scrollToExpandedTask() {
+        if (!expandedTaskId) return;
+        
+        // Wait for the DOM to update
+        await tick();
+
+        // Find the expanded row element
+        const expandedRow = document.querySelector(`[data-task-id="${expandedTaskId}"]`);
+        if (expandedRow) {
+            expandedRow.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start'
+            });
+        }
+    }
+
+    async function expandNextTask() {
+        if (!filteredTasks.length) return;
+        
+        const currentIndex = expandedTaskId 
+            ? filteredTasks.findIndex(t => t.id === expandedTaskId)
+            : -1;
+        
+        const nextIndex = currentIndex < filteredTasks.length - 1 
+            ? currentIndex + 1 
+            : 0;
+            
+        expandedTaskId = filteredTasks[nextIndex].id;
+        await scrollToExpandedTask();
+    }
+
+    async function expandPreviousTask() {
+        if (!filteredTasks.length) return;
+        
+        const currentIndex = expandedTaskId 
+            ? filteredTasks.findIndex(t => t.id === expandedTaskId)
+            : 0;
+        
+        const previousIndex = currentIndex > 0 
+            ? currentIndex - 1 
+            : filteredTasks.length - 1;
+            
+        expandedTaskId = filteredTasks[previousIndex].id;
+        await scrollToExpandedTask();
+    }
+
+    function handleKeydown(event: KeyboardEvent) {
+        if (event.target instanceof HTMLInputElement || 
+            event.target instanceof HTMLTextAreaElement) {
+            return;
+        }
+
+        if (event.key === 'j') {
+            expandNextTask();
+        } else if (event.key === 'k') {
+            expandPreviousTask();
+        }
+    }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="container mx-auto p-4">
     <div class="flex justify-between items-center mb-4">
@@ -153,8 +215,12 @@
                                 {@const isExpanded = expandedTaskId === task.id}
                                 {@const {isPassed, statusClass} = getTaskStatus(task)}
                                 <Table.Row 
+                                    data-task-id={task.id}
                                     class={`cursor-pointer ${statusClass}`}
-                                    on:click={() => expandedTaskId = isExpanded ? null : task.id}
+                                    on:click={() => {
+                                        expandedTaskId = isExpanded ? null : task.id;
+                                        if (isExpanded) scrollToExpandedTask();
+                                    }}
                                 >
                                     <Table.Cell class="w-4">
                                         <Button variant="ghost" size="sm" class="h-4 w-4 p-0">
@@ -335,29 +401,53 @@
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    
+                                                    {#if task.eval_details?.evaluations}
+                                                        <div>
+                                                            <!-- <h5 class="font-semibold mb-2">Evaluation Criteria</h5> -->
+                                                            <Table.Root>
+                                                                <Table.Header>
+                                                                    <Table.Row>
+                                                                        <Table.Head>Criteria</Table.Head>
+                                                                        <Table.Head class="w-24 text-center">Score</Table.Head>
+                                                                    </Table.Row>
+                                                                </Table.Header>
+                                                                <Table.Body>
+                                                                    {#each task.eval_details.evaluations as ev}
+                                                                        <Table.Row>
+                                                                            <Table.Cell>
+                                                                                <div class="space-y-1">
+                                                                                    <div>{ev.criterion}</div>
+                                                                                    <div class="text-sm text-gray-500">{ev.rationale}</div>
+                                                                                </div>
+                                                                            </Table.Cell>
+                                                                            <Table.Cell class="text-center">
+                                                                                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full 
+                                                                                    {ev.score >= 1 ? 'bg-green-100 text-green-800' : 
+                                                                                     ev.score > 0 ? 'bg-yellow-100 text-yellow-800' : 
+                                                                                     'bg-red-100 text-red-800'}">
+                                                                                    {(ev.score * 100).toFixed(0)}%
+                                                                                </div>
+                                                                            </Table.Cell>
+                                                                        </Table.Row>
+                                                                    {/each}
+                                                                </Table.Body>
+                                                            </Table.Root>
+                                                        </div>
+                                                    {/if}
+
                                                     {#if task.eval_details}
                                                         <div>
                                                             <h5 class="font-semibold mb-1">Details</h5>
                                                             {#each Object.entries(task.eval_details) as [key, value]}
-                                                                <div class="mb-1 pl-2">
-                                                                    <h6 class="font-semibold">{key}</h6>
-                                                                    <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
-                                                                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                {#if key !== 'evaluations'}
+                                                                    <div class="mb-1 pl-2">
+                                                                        <h6 class="font-semibold">{key}</h6>
+                                                                        <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                                            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            {/each}
-                                                        </div>
-                                                    {/if}
-                                                    {#if task.eval_spec}
-                                                        <div>
-                                                            <h5 class="font-semibold mb-1">Spec</h5>
-                                                            {#each Object.entries(task.eval_spec) as [key, value]}
-                                                                <div class="mb-1 pl-2">
-                                                                    <h6 class="font-semibold">{key}</h6>
-                                                                    <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
-                                                                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
-                                                                    </div>
-                                                                </div>
+                                                                {/if}
                                                             {/each}
                                                         </div>
                                                     {/if}
