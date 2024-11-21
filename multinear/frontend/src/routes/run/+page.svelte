@@ -249,7 +249,7 @@
                                                                 <Button 
                                                                     variant="outline" 
                                                                     size="sm"
-                                                                    class="text-sm"
+                                                                    class="text-sm bg-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
                                                                     on:click={() => {
                                                                         const projectId = runDetails.project.id;
                                                                         const challengeId = task.challenge_id;
