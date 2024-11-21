@@ -9,6 +9,8 @@
     import { formatDuration, intervalToDuration } from 'date-fns';
     import { ChevronRight } from 'lucide-svelte';
     import TimeAgo from '$lib/components/TimeAgo.svelte';
+    import StatusFilter from '$lib/components/StatusFilter.svelte';
+    import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -36,50 +38,8 @@
     let statusFilter = "";
     let searchTerm = "";
     
-    $: filteredTasks = runDetails?.tasks.filter((task: any) => {
-        if (statusFilter && task.status !== statusFilter) return false;
-        
-        if (searchTerm) {
-            const search = searchTerm.toLowerCase();
-            // Search through all task fields recursively
-            const searchInObject = (obj: any): boolean => {
-                if (!obj) return false;
-                if (typeof obj === 'string') return obj.toLowerCase().includes(search);
-                if (typeof obj === 'number') return obj.toString().toLowerCase().includes(search);
-                if (Array.isArray(obj)) return obj.some(item => searchInObject(item));
-                if (typeof obj === 'object') {
-                    return Object.values(obj).some(value => searchInObject(value));
-                }
-                return false;
-            };
-            
-            return searchInObject(task);
-        }
-        
-        return true;
-    });    
-
-    // Calculate status counts
-    $: statusCounts = runDetails?.tasks.reduce((acc: Record<string, number>, task: { status: string }) => {
-        acc[task.status] = (acc[task.status] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>) || {};
-
-    $: availableStatuses = Object.entries(statusCounts)
-        .filter(([_, count]: [any, any]) => count > 0)
-        .map(([status]) => status);
-
-    function truncateInput(input: any, maxLength: number = 50): string {
-        if (!input) return '-';
-        
-        const text = typeof input === 'object' && 'str' in input 
-            ? input.str 
-            : JSON.stringify(input);
-            
-        return text.length > maxLength 
-            ? text.slice(0, maxLength) + '...' 
-            : text;
-    }
+    $: filteredTasks = filterTasks(runDetails?.tasks || [], statusFilter, searchTerm);
+    $: statusCounts = getStatusCounts(runDetails?.tasks || []);
 </script>
 
 <div class="container mx-auto p-4">
@@ -155,44 +115,14 @@
                         </div>
                         
                         <!-- Filters Row -->
-                        <div class="flex gap-8 items-end">
-                            {#if availableStatuses.length > 1 && runDetails.tasks.length >= 5}
-                                <div class="flex flex-col space-y-1.5">
-                                    <Label>Filter</Label>
-                                    <div class="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            class={`
-                                                ${statusFilter === "" ? 'bg-gray-100 border-gray-200' : ''}
-                                            `}
-                                            on:click={() => statusFilter = ""}
-                                        >
-                                            All tasks ({runDetails.tasks.length})
-                                        </Button>
-                                        {#each availableStatuses as status}
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                class={`
-                                                    ${status === 'completed' ? 'text-green-700' : 
-                                                      status === 'failed' ? 'text-red-700' : 
-                                                      'text-gray-700'}
-                                                    ${statusFilter === status ? 
-                                                      status === 'completed' ? 'bg-green-50 border-green-200' :
-                                                      status === 'failed' ? 'bg-red-50 border-red-200' :
-                                                      'bg-gray-50 border-gray-200' : ''}
-                                                `}
-                                                on:click={() => statusFilter = status}
-                                            >
-                                                {status} ({statusCounts[status]})
-                                            </Button>
-                                        {/each}
-                                    </div>
-                                </div>
+                        <div class="flex gap-8 items-end mt-4">
+                            {#if runDetails.tasks.length >= 5}
+                                <StatusFilter 
+                                    bind:statusFilter
+                                    statusCounts={statusCounts}
+                                    totalCount={runDetails.tasks.length}
+                                />
                             {/if}
-                            
-                            <!-- <div class="flex flex-col space-y-1.5 flex-grow"> -->
                         </div>
                     </Card.Description>
                 </Card.Header>
@@ -220,9 +150,9 @@
                         <Table.Body>
                             {#each filteredTasks as task}
                                 {@const isExpanded = expandedTaskId === task.id}
+                                {@const {isPassed, statusClass} = getTaskStatus(task)}
                                 <Table.Row 
-                                    class={`cursor-pointer ${task.eval_passed ? 
-                                        'bg-green-50 hover:bg-green-100' : 'bg-red-100 hover:bg-red-200'}`}
+                                    class={`cursor-pointer ${statusClass}`}
                                     on:click={() => expandedTaskId = isExpanded ? null : task.id}
                                 >
                                     <Table.Cell class="w-4">
@@ -269,7 +199,7 @@
                                     <Table.Cell>
                                         <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex">
                                             <div
-                                                class="h-4 min-w-[5px] {task.eval_passed ? 'bg-green-600' : 'bg-red-600'}"
+                                                class="h-4 min-w-[5px] {isPassed ? 'bg-green-600' : 'bg-red-600'}"
                                                 style="width: {(task.eval_score * 100).toFixed(0)}%"
                                             ></div>
                                         </div>
