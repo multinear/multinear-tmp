@@ -16,7 +16,7 @@
 
 <div class="container mx-auto flex-1 flex items-center justify-center p-4">
     <div class="w-96 max-w-2xl space-y-8">
-        <h1 class="text-4xl font-bold text-center mb-8">Projects</h1>
+        <h1 class="text-3xl font-bold text-center mb-8">Projects</h1>
 
         {#if $projectsLoading}
             <div class="text-center text-gray-500">Loading projects...</div>

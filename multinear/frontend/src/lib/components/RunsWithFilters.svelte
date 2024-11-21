@@ -17,6 +17,7 @@
     import * as Tooltip from "$lib/components/ui/tooltip";
     import type { RecentRun } from "$lib/api";
     import { selectedProjectId } from "$lib/stores/projects";
+    import TimeAgo from "$lib/components/TimeAgo.svelte";
 
     // Props passed from the parent component
     export let runsList: RecentRun[];
@@ -95,9 +96,9 @@
 <!-- Filters and Controls -->
 {#if showFilters}
     <Card.Root>
-        <Card.Header>
+        <!-- <Card.Header>
             <Card.Title>Filters and Search</Card.Title>
-        </Card.Header>
+        </Card.Header> -->
         <Card.Content class="flex flex-wrap gap-4">
             <!-- Date Range Filter -->
             <div class="flex flex-col space-y-1.5">
@@ -281,10 +282,7 @@
                                 </Tooltip.Root>
                             </Table.Cell>
                             <Table.Cell>
-                                {new Date(run.date).toLocaleString(undefined, {
-                                    dateStyle: 'medium',
-                                    timeStyle: 'short'
-                                })}
+                                <TimeAgo date={run.date} />
                             </Table.Cell>
                             <Table.Cell>{run.revision}</Table.Cell>
                             <Table.Cell>{run.model}</Table.Cell>

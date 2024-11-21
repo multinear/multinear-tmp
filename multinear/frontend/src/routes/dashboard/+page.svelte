@@ -204,7 +204,7 @@
         </div>
     {:else}
         <div class="flex justify-between items-center">
-            <h1 class="text-3xl font-bold">Dashboard: {currentProject.name}</h1>
+            <h1 class="text-3xl font-bold -mb-2 -mt-2">Dashboard: {currentProject.name}</h1>
             <JobControls reloadRecentRuns={loadRecentRuns} />
         </div>
 

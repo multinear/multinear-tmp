@@ -36,7 +36,7 @@
 </script>
 
 <div class="container mx-auto p-4 space-y-6">
-    <h1 class="text-4xl font-bold mb-8">Experiments</h1>
+    <h1 class="text-3xl font-bold">Experiments</h1>
 
         <!-- List of Runs Component -->
         <RunsWithFilters

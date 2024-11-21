@@ -6,8 +6,9 @@
     import * as Table from "$lib/components/ui/table";
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
-    import { formatDuration, intervalToDuration } from 'date-fns';
+    import { formatDuration, intervalToDuration, formatDistanceToNow } from 'date-fns';
     import { ChevronRight } from 'lucide-svelte';
+    import TimeAgo from '$lib/components/TimeAgo.svelte';
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -82,7 +83,15 @@
 </script>
 
 <div class="container mx-auto p-4">
-    <h1 class="text-4xl font-bold mb-8">Run: {$selectedRunId.slice(-8)}</h1>
+    <div class="flex gap-12 items-center mb-4">
+        <h1 class="text-3xl font-bold">Run: {$selectedRunId.slice(-8)}</h1>
+        {#if runDetails}
+            <span class="text-xl text-gray-500">
+                <!-- {formatDistanceToNow(new Date(runDetails.date), { addSuffix: true }).replace("about ", "~")} -->
+                <TimeAgo date={runDetails.date} />
+            </span>
+        {/if}
+    </div>
 
     {#if loading}
         <div class="text-center text-gray-500">Loading run details...</div>
@@ -109,12 +118,6 @@
             <!-- Summary Card -->
             <Card.Root class="pb-8">
                 <Card.Header>
-                    <Card.Title class="flex justify-between items-center">
-                        <span>Run Summary</span>
-                        <span class="text-sm text-gray-500">
-                            {new Date(runDetails.date).toLocaleString()}
-                        </span>
-                    </Card.Title>
                     <Card.Description>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                             <div class="space-y-1">
@@ -224,10 +227,7 @@
                                         {task.id.slice(-8)}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {new Date(task.created_at).toLocaleString(undefined, {
-                                            dateStyle: 'medium',
-                                            timeStyle: 'short'
-                                        })}
+                                        <TimeAgo date={task.created_at} />
                                     </Table.Cell>
                                     <Table.Cell>
                                         {#if task.finished_at}
