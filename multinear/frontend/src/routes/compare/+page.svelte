@@ -7,8 +7,9 @@
     import { Checkbox } from "$lib/components/ui/checkbox";
     import TimeAgo from '$lib/components/TimeAgo.svelte';
     import StatusFilter from '$lib/components/StatusFilter.svelte';
+    import { formatDuration, intervalToDuration } from 'date-fns';
 
-    import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
+    import { filterTasks, getStatusCounts, getTaskStatus } from '$lib/utils/tasks';
     import { getSameTasks } from '$lib/api';
     // import type { TaskDetails } from '$lib/api';
 
@@ -115,11 +116,8 @@
                                 <Table.Head class="w-[50px]">
                                     <Checkbox />
                                 </Table.Head>
-                                <Table.Head>Task ID</Table.Head>
                                 <Table.Head class="w-[50%]">Output</Table.Head>
-                                <Table.Head>Model</Table.Head>
-                                <Table.Head>Score</Table.Head>
-                                <Table.Head>Created</Table.Head>
+                                <Table.Head>Details</Table.Head>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -139,30 +137,73 @@
                                             }}
                                         />
                                     </Table.Cell>
-                                    <Table.Cell class="font-medium font-mono">
-                                        {task.id.slice(-8)}
-                                    </Table.Cell>
                                     <Table.Cell>
-                                        <div class="text-sm bg-white p-2 rounded border overflow-auto max-h-32">
+                                        <div class="text-sm bg-white p-2 rounded border overflow-auto">
                                             {typeof task.task_output === 'object' && 'str' in task.task_output 
                                                 ? task.task_output.str 
                                                 : JSON.stringify(task.task_output, null, 2)}
                                         </div>
                                     </Table.Cell>
-                                    <Table.Cell>{task.task_details.model}</Table.Cell>
                                     <Table.Cell>
-                                        <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex">
-                                            <div
-                                                class="h-4 min-w-[5px] {isPassed ? 'bg-green-600' : 'bg-red-600'}"
-                                                style="width: {(task.eval_score * 100).toFixed(0)}%"
-                                            ></div>
+                                        <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 items-center">
+                                            <!-- Left column -->
+                                            <div class="font-medium text-gray-500 text-sm">ID</div>
+                                            <div class="font-mono text-sm">{task.id.slice(-8)}</div>
+
+                                            <div class="font-medium text-gray-500 text-sm">Model</div>
+                                            <div class="text-sm">{task.task_details.model}</div>
+
+                                            <div class="font-medium text-gray-500 text-sm">Status</div>
+                                            <div class="flex items-center gap-2">
+                                                <span class={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                                                    ${task.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                                    task.status === 'failed' ? 'bg-red-100 text-red-800' : 
+                                                    'bg-gray-100 text-gray-800'}`}>
+                                                    {task.status}
+                                                </span>
+                                                <div class="flex items-center gap-1">
+                                                    <div class="w-16 bg-gray-200 rounded-sm h-2 overflow-hidden flex">
+                                                        <div
+                                                            class="h-2 min-w-[3px] {isPassed ? 'bg-green-600' : 'bg-red-600'}"
+                                                            style="width: {(task.eval_score * 100).toFixed(0)}%"
+                                                        ></div>
+                                                    </div>
+                                                    <div class="text-xs text-gray-600">
+                                                        {(task.eval_score * 100).toFixed(0)}%
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="font-medium text-gray-500 text-sm">Time</div>
+                                            <div class="flex items-center gap-3 text-sm text-gray-600">
+                                                <TimeAgo date={task.created_at} />
+                                                {#if task.finished_at}
+                                                    <span class="text-gray-400">·</span>
+                                                    <span>{formatDuration(
+                                                        intervalToDuration({
+                                                            start: new Date(task.created_at),
+                                                            end: new Date(task.finished_at)
+                                                        }),
+                                                        { format: ['minutes', 'seconds'] }
+                                                    )}</span>
+                                                {/if}
+                                            </div>
+
+                                            {#if task.task_details.temperature || task.task_details.max_tokens}
+                                                <div class="font-medium text-gray-500 text-sm">Parameters</div>
+                                                <div class="flex gap-3 text-sm text-gray-600">
+                                                    {#if task.task_details.temperature}
+                                                        <span>temperature: {task.task_details.temperature}</span>
+                                                    {/if}
+                                                    {#if task.task_details.max_tokens}
+                                                        {#if task.task_details.temperature}
+                                                            <span class="text-gray-400">·</span>
+                                                        {/if}
+                                                        <span>max tokens: {task.task_details.max_tokens}</span>
+                                                    {/if}
+                                                </div>
+                                            {/if}
                                         </div>
-                                        <div class="text-center text-xs font-medium">
-                                            {(task.eval_score * 100).toFixed(0)}%
-                                        </div>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                        <TimeAgo date={task.created_at} />
                                     </Table.Cell>
                                 </Table.Row>
                             {/each}
