@@ -241,6 +241,18 @@ class TaskModel(Base):
         with db_context() as db:
             tasks = db.query(cls).filter(cls.job_id == job_id).all()
             return {task.id: task.status for task in tasks}
+        
+    @classmethod
+    def find_same_tasks(cls, project_id: str, challenge_id: str, limit: int = 10, offset: int = 0) -> List["TaskModel"]:
+        """Find tasks with the same challenge ID"""
+        with db_context() as db:
+            return (db.query(cls)
+                   .join(JobModel, cls.job_id == JobModel.id)
+                   .filter(cls.challenge_id == challenge_id, JobModel.project_id == project_id)
+                   .order_by(cls.created_at.desc())
+                   .offset(offset)
+                   .limit(limit)
+                   .all())
 
 
 # Global variable to store SessionLocal

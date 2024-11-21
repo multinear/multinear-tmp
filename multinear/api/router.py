@@ -160,6 +160,26 @@ async def get_recent_runs(
     
     return runs
 
+def _get_task_details(task: TaskModel):
+    return TaskDetails(
+        id=task.id,
+        status=task.status,
+        error=task.error,
+        task_input={'str': task.task_input} if type(task.task_input) == str else task.task_input,
+        task_output={'str': task.task_output} if type(task.task_output) == str else task.task_output,
+        task_details=task.task_details,
+        task_logs={'logs': task.task_logs} if task.task_logs else None,
+        eval_spec=task.eval_spec,
+        eval_passed=task.eval_passed,
+        eval_score=task.eval_score,
+        eval_details=task.eval_details,
+        eval_logs={'logs': task.eval_logs} if task.eval_logs else None,
+        created_at=task.created_at.replace(tzinfo=timezone.utc).isoformat(),
+        executed_at=task.executed_at.replace(tzinfo=timezone.utc).isoformat() if task.executed_at else None,
+        evaluated_at=task.evaluated_at.replace(tzinfo=timezone.utc).isoformat() if task.evaluated_at else None,
+        finished_at=task.finished_at.replace(tzinfo=timezone.utc).isoformat() if task.finished_at else None
+    )
+
 @api_router.get("/run-details/{run_id}", response_model=FullRunDetails)
 async def get_run_details(run_id: str):
     job = JobModel.find(run_id)
@@ -173,26 +193,7 @@ async def get_run_details(run_id: str):
     
     # Get all tasks for this job
     tasks = TaskModel.list(run_id)
-    task_details = [
-        TaskDetails(
-            id=task.id,
-            status=task.status,
-            error=task.error,
-            task_input={'str': task.task_input} if type(task.task_input) == str else task.task_input,
-            task_output={'str': task.task_output} if type(task.task_output) == str else task.task_output,
-            task_details=task.task_details,
-            task_logs={'logs': task.task_logs} if task.task_logs else None,
-            eval_spec=task.eval_spec,
-            eval_passed=task.eval_passed,
-            eval_score=task.eval_score,
-            eval_details=task.eval_details,
-            eval_logs={'logs': task.eval_logs} if task.eval_logs else None,
-            created_at=task.created_at.replace(tzinfo=timezone.utc).isoformat(),
-            executed_at=task.executed_at.replace(tzinfo=timezone.utc).isoformat() if task.executed_at else None,
-            evaluated_at=task.evaluated_at.replace(tzinfo=timezone.utc).isoformat() if task.evaluated_at else None,
-            finished_at=task.finished_at.replace(tzinfo=timezone.utc).isoformat() if task.finished_at else None
-        ) for task in tasks
-    ]
+    task_details = [_get_task_details(task) for task in tasks]
     
     # Create the full run details response
     return FullRunDetails(
@@ -207,3 +208,9 @@ async def get_run_details(run_id: str):
         status=job.status,
         tasks=task_details
     )
+
+# let's write a new API to find tasks with the same challenge ID
+@api_router.get("/same-tasks/{project_id}/{challenge_id}", response_model=List[TaskDetails])
+async def get_same_tasks(project_id: str, challenge_id: str, limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0)):
+    tasks = TaskModel.find_same_tasks(project_id, challenge_id, limit, offset)
+    return [_get_task_details(task) for task in tasks]
