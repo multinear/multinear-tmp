@@ -3,11 +3,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
-from .api.router import init_api, api_router
+from .api.router import api_router
+from .engine.storage import init_project_db
 
 
-# Initialize the API and database
-init_api()
+# Initialize the configuration and database
+init_project_db()
 
 # Create the FastAPI application with custom documentation URLs
 app = FastAPI(

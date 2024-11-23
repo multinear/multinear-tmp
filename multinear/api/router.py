@@ -1,50 +1,11 @@
 from fastapi import BackgroundTasks, HTTPException, APIRouter, Query
 from typing import List
-from pathlib import Path
-import yaml
 from datetime import timezone
 
-from ..api.schemas import Project, JobDetails, RecentRun, FullRunDetails, TaskDetails, RecentRunsResponse
+from ..api.schemas import Project, JobDetails, FullRunDetails, TaskDetails, RecentRunsResponse
 from ..engine.run import run_experiment
-from ..engine.storage import init_db, ProjectModel, JobModel, TaskModel, TaskStatus
+from ..engine.storage import ProjectModel, JobModel, TaskModel, TaskStatus
 
-
-def init_api():
-    """
-    Initialize the API by setting up the database and loading project configurations.
-
-    This function performs the following steps:
-    1. Initializes the database connection and creates necessary tables.
-    2. Loads the project configuration from the local `.multinear/config.yaml` file.
-    3. Extracts project details and saves or updates the project in the database.
-    """
-    # Initialize the database and read the project configuration
-    init_db()
-
-    # Get the current working directory
-    current_dir = Path.cwd()
-
-    # Read project configuration from the local .multinear/config.yaml
-    config_path = current_dir / ".multinear" / "config.yaml"
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-
-    # Extract project details
-    project_id = config["project"]["id"]
-    project_data = {
-        "id": project_id,
-        "name": config["project"]["name"],
-        "description": config["project"]["description"],
-        "folder": str(current_dir)
-    }
-
-    # Update or create the project in the database on startup
-    ProjectModel.save(
-        id=project_id,
-        name=project_data["name"],
-        description=project_data["description"],
-        folder=project_data["folder"]
-    )
 
 
 def background_job(project_id: str, job_id: str):
