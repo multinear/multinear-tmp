@@ -8,9 +8,10 @@ import tqdm
 from rich.console import Console
 from rich.table import Table
 import yaml
+from datetime import datetime, timezone
 
 from .engine.run import run_experiment
-from .engine.storage import init_project_db, JobModel, ProjectModel, TaskModel
+from .engine.storage import init_project_db, JobModel, ProjectModel, TaskModel, TaskStatus
 
 
 MULTINEAR_CONFIG_DIR = '.multinear'
@@ -160,6 +161,132 @@ def is_project_initialized():
         return False
     return True
 
+def format_duration(created_at: str, finished_at: str | None) -> str:
+    """Format duration between created_at and finished_at timestamps."""
+    if not finished_at:
+        return "-"
+    
+    start = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    end = datetime.fromisoformat(finished_at.replace('Z', '+00:00'))
+    duration = end - start
+    
+    minutes = duration.seconds // 60
+    seconds = duration.seconds % 60
+    
+    if minutes > 0:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+def get_score_color(score: float) -> str:
+    """Get color for score based on value."""
+    if score >= 0.9:
+        return "green"
+    elif score >= 0.7:
+        return "yellow"
+    return "red"
+
+def show_recent_runs():
+    """
+    Show recent experiment runs in a formatted table.
+    """
+    if not is_project_initialized():
+        return
+
+    # Initialize database and get project
+    project_id = init_project_db()
+    project = ProjectModel.find(project_id)
+    
+    # Get recent jobs
+    jobs = JobModel.list_recent(project_id, limit=10)
+    
+    # Create and configure the table
+    console = Console()
+    table = Table(
+        title=f"Recent Experiments for {project.name}",
+        show_header=True,
+        header_style="bold cyan"
+    )
+    
+    # Add columns
+    table.add_column("Run ID", style="dim")
+    table.add_column("Date & Time")
+    table.add_column("Duration")
+    # table.add_column("Code Revision")
+    table.add_column("Model Version")
+    table.add_column("Total Tests", justify="right")
+    table.add_column("Score", justify="center")
+    table.add_column("Results")
+    
+    # Add rows
+    for job in jobs:
+        details = job.details or {}
+        status_map = details.get("status_map", {})
+        
+        # Calculate statistics
+        total = len(status_map)
+        passed = sum(1 for status in status_map.values() if status == TaskStatus.COMPLETED)
+        failed = sum(1 for status in status_map.values() if status == TaskStatus.FAILED)
+        regression = total - passed - failed
+        score = (passed / total) if total > 0 else 0
+
+        # Get model info
+        model = job.get_model_summary()
+        
+        # Format results bar using unicode blocks
+        if total > 0:
+            bar_length = 20
+            # Calculate exact number of blocks, keeping fractional parts
+            pass_ratio = passed / total
+            fail_ratio = failed / total
+            regr_ratio = regression / total
+            
+            # Calculate blocks
+            pass_blocks = int(pass_ratio * bar_length)
+            fail_blocks = int(fail_ratio * bar_length)
+            regr_blocks = int(regr_ratio * bar_length)
+            
+            # Calculate remainder and add it to the last non-zero category
+            remainder = bar_length - (pass_blocks + fail_blocks + regr_blocks)
+            if remainder > 0:
+                if regression > 0:
+                    regr_blocks += remainder
+                elif failed > 0:
+                    fail_blocks += remainder
+                else:
+                    pass_blocks += remainder
+            
+            results_bar = (
+                f"[green]{'█' * pass_blocks}[/green]"
+                f"[red]{'█' * fail_blocks}[/red]"
+                f"[yellow]{'█' * regr_blocks}[/yellow]"
+            )
+        else:
+            results_bar = ""
+        
+        # Add row to table
+        table.add_row(
+            job.id[-8:],  # Short ID
+            job.created_at.strftime("%Y-%m-%d %H:%M"),
+            format_duration(
+                job.created_at.replace(tzinfo=timezone.utc).isoformat(),
+                job.finished_at.replace(tzinfo=timezone.utc).isoformat() if job.finished_at else None
+            ),
+            # details.get("revision", ""),
+            model,
+            str(total),
+            f"[{get_score_color(score)}]{score:.2f}[/]",
+            results_bar
+        )
+    
+    # Print the table
+    console.print(table)
+    
+    # Print legend
+    legend = Table.grid(padding=1)
+    legend.add_column()
+    legend.add_row("[green]█[/green] Pass", "[red]█[/red] Fail", "[yellow]█[/yellow] Regression")
+    console.print("\nLegend:", legend)
+
 def main():
     parser = argparse.ArgumentParser(description="Multinear CLI tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
@@ -168,7 +295,10 @@ def main():
     init_cmd = subparsers.add_parser('init', help='Initialize a new Multinear project')
 
     # Define the 'run' command
-    run_cmd = subparsers.add_parser('run_experiment', help='Run experiment and track progress')
+    run_cmd = subparsers.add_parser('run', help='Run experiment and track progress')
+
+    # Define the 'recent' command
+    recent_cmd = subparsers.add_parser('recent', help='Show recent experiment runs')
 
     # Define the 'web' and 'web_dev' commands
     web_cmd = subparsers.add_parser('web', help='Start platform web server')
@@ -181,9 +311,11 @@ def main():
     
     if args.command == 'init':
         init_project()
-    elif args.command == 'run_experiment':
+    elif args.command == 'run':
         if not is_project_initialized(): return
         run_experiment_command()
+    elif args.command == 'recent':
+        show_recent_runs()
     elif args.command in ['web', 'web_dev']:
         if not is_project_initialized(): return
         
