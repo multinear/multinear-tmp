@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 from datetime import timezone
 
-from ..api.schemas import Project, JobDetails, RecentRun, FullRunDetails, TaskDetails
+from ..api.schemas import Project, JobDetails, RecentRun, FullRunDetails, TaskDetails, RecentRunsResponse
 from ..engine.run import run_experiment
 from ..engine.storage import init_db, ProjectModel, JobModel, TaskModel, TaskStatus
 
@@ -114,7 +114,7 @@ async def get_job_status(project_id: str, job_id: str):
         details=details
     )
 
-@api_router.get("/runs/{project_id}", response_model=List[RecentRun])
+@api_router.get("/runs/{project_id}", response_model=RecentRunsResponse)
 async def get_recent_runs(
     project_id: str,
     limit: int = Query(5, ge=1, le=100),
@@ -123,13 +123,15 @@ async def get_recent_runs(
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
     
+    # Get total count of runs for this project
+    total_runs = JobModel.count_jobs(project_id)
+    
+    # Get paginated recent jobs
     recent_jobs = JobModel.list_recent(project_id, limit, offset)
     
     runs = []
     for job in recent_jobs:
         job_data = job.details or {}
-        # run = _generate_fake_run(job.id, job_data, job.created_at)
-        # runs.append(run)
         model = job.get_model_summary()
 
         total = passed = failed = regression = score = 0
@@ -146,7 +148,6 @@ async def get_recent_runs(
             "id": job.id,
             "created_at": job.created_at.replace(tzinfo=timezone.utc).isoformat(),
             "finished_at": job.finished_at.replace(tzinfo=timezone.utc).isoformat() if job.finished_at else None,
-            # "status": job.status,
             "revision": job_data.get("revision", ""),
             "model": model,
             "score": score,
@@ -157,8 +158,8 @@ async def get_recent_runs(
             # "bookmarked": False,
             # "noted": False
         })
-    
-    return runs
+
+    return RecentRunsResponse(runs=runs, total=total_runs)
 
 def _get_task_details(task: TaskModel):
     return TaskDetails(

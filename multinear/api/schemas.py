@@ -57,3 +57,7 @@ class FullRunDetails(BaseModel):
     date: str
     status: str
     tasks: List[TaskDetails]
+
+class RecentRunsResponse(BaseModel):
+    runs: List[RecentRun]
+    total: int

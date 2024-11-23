@@ -31,6 +31,11 @@ export interface RecentRun {
     noted?: boolean;
 }
 
+interface RecentRunsResponse {
+    runs: RecentRun[];
+    total: number;
+}
+
 export async function getProjects(): Promise<Project[]> {
     const response = await fetch(`${API_URL}/projects`);
     if (!response.ok) {
@@ -65,11 +70,20 @@ export async function getJobStatus(projectId: string, jobId: string): Promise<Jo
     return response.json();
 }
 
-export async function getRecentRuns(projectId: string, limit: number = 5, offset: number = 0): Promise<RecentRun[]> {
-    const response = await fetch(`${API_URL}/runs/${projectId}?limit=${limit}&offset=${offset}`);
+export async function getRecentRuns(projectId: string, limit: number = 5, offset: number = 0): Promise<RecentRunsResponse> {
+    const response = await fetch(
+        `${API_URL}/runs/${projectId}?limit=${limit}&offset=${offset}`,
+        {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        }
+    );
+
     if (!response.ok) {
         throw new Error(`Failed to fetch recent runs: ${response.statusText}`);
     }
+
     return response.json();
 }
 

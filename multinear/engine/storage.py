@@ -151,6 +151,12 @@ class JobModel(Base):
             else:
                 return "multiple"
 
+    @classmethod
+    def count_jobs(cls, project_id: str) -> int:
+        """Get total count of jobs for a project"""
+        with db_context() as db:
+            return db.query(cls).filter(cls.project_id == project_id).count()
+
 
 class TaskModel(Base):
     __tablename__ = "tasks"

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import * as Card from "$lib/components/ui/card";
-    import { Button } from "$lib/components/ui/button";
+    // import * as Card from "$lib/components/ui/card";
+    // import { Button } from "$lib/components/ui/button";
     import { goto } from '$app/navigation';
     import { getRecentRuns } from '$lib/api';
     import type { RecentRun } from '$lib/api';
@@ -26,7 +26,9 @@
         loading = true;
         error = null;
         try {
-            runs = await getRecentRuns($selectedProjectId, 100, 0);
+            const response = await getRecentRuns($selectedProjectId, 100, 0);
+            runs = response.runs;
+            // totalRuns = response.total;
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to load runs";
             console.error(e);
@@ -58,7 +60,7 @@
         initialSearchTerm={localSearchTerm}
     />
 
-    <div class="grid gap-4 pt-8">
+    <!-- <div class="grid gap-4 pt-8">
         {#each runs.slice(0, 2) as run (run.id)}
             <Card.Root class="hover:bg-gray-50 transition-colors">
                 <button
@@ -86,6 +88,6 @@
                 </button>
             </Card.Root>
         {/each}
-    </div>
+    </div> -->
 
 </div>
