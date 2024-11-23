@@ -11,6 +11,9 @@ Base = declarative_base()
 
 
 class TaskStatus:
+    """
+    Enumeration of task statuses.
+    """
     STARTING = "starting"
     RUNNING = "running"
     EVALUATING = "evaluating"
@@ -18,7 +21,7 @@ class TaskStatus:
     FAILED = "failed"
 
 
-# Define SQLAlchemy models
+# Define SQLAlchemy models to represent database tables
 class ProjectModel(Base):
     __tablename__ = "projects"
     
@@ -30,31 +33,48 @@ class ProjectModel(Base):
 
     @classmethod
     def list(cls) -> List["ProjectModel"]:
+        """
+        List all projects
+        """
         with db_context() as db:
             return db.query(cls).all()
 
     @classmethod
     def find(cls, project_id: str) -> Optional["ProjectModel"]:
+        """
+        Find a project by ID
+        """
         with db_context() as db:
             return db.query(cls).filter(cls.id == project_id).first()
 
     @classmethod
     def save(cls, id: str, name: str, description: str, folder: str) -> "ProjectModel":
+        """
+        Save or update a project
+        """
         with db_context() as db:
             project = db.query(cls).filter(cls.id == id).first()
             if project:
+                """
+                Update existing project
+                """
                 project.name = name
                 project.description = description
                 project.folder = folder
             else:
+                """
+                Create a new project
+                """
                 project = cls(id=id, name=name, description=description, folder=folder)
                 db.add(project)
             db.commit()
             return project
 
     def to_dict(self):
-        # remove SQLAlchemy internal state
-        return {k:v for k,v in self.__dict__.items() if not k.startswith('_')}
+        """
+        Convert the ProjectModel to a dictionary, excluding SQLAlchemy internals
+        """
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
 
 
 class JobModel(Base):
@@ -73,7 +93,9 @@ class JobModel(Base):
 
     @classmethod
     def start(cls, project_id: str) -> str:
-        """Start a new job and return its ID"""
+        """
+        Start a new job for a project and return its ID.
+        """
         job_id = str(uuid.uuid4())
         with db_context() as db:
             job = cls(id=job_id, project_id=project_id, status="started")
@@ -83,10 +105,16 @@ class JobModel(Base):
 
     @classmethod
     def find(cls, job_id: str) -> Optional["JobModel"]:
+        """
+        Find a job by ID.
+        """
         with db_context() as db:
             return db.query(cls).filter(cls.id == job_id).first()
 
     def update(self, status: str, total_tasks: int = 0, current_task: Optional[int] = None, details: dict = None):
+        """
+        Update the job status and other fields.
+        """
         with db_context() as db:
             job = db.query(JobModel).filter(JobModel.id == self.id).one()
             job.status = status
@@ -95,43 +123,53 @@ class JobModel(Base):
             if details is not None:
                 job.details = details
             db.commit()
-            # Update current instance
+            # Update the current instance
             self.status = status
             self.total_tasks = total_tasks
             self.current_task = current_task
             self.details = details
 
     def finish(self, status: str = TaskStatus.COMPLETED):
+        """
+        Mark the job as finished.
+        """
         finished_at = datetime.now(timezone.utc)
         with db_context() as db:
             job = db.query(JobModel).filter(JobModel.id == self.id).one()
             job.status = status
             job.finished_at = finished_at
             db.commit()
-            # Update current instance
+            # Update the current instance
             self.status = status
             self.finished_at = finished_at
 
     @classmethod
     def list_recent(cls, project_id: str, limit: int = 5, offset: int = 0) -> List["JobModel"]:
+        """
+        List recent jobs for a project with pagination.
+        """
         with db_context() as db:
             return (db.query(cls)
-                   .filter(cls.project_id == project_id)
-                   .order_by(cls.created_at.desc())
-                   .offset(offset)
-                   .limit(limit)
-                   .all())
+                    .filter(cls.project_id == project_id)
+                    .order_by(cls.created_at.desc())
+                    .offset(offset)
+                    .limit(limit)
+                    .all())
 
     @classmethod
     def get_status(cls, project_id: str, job_id: str) -> Optional["JobModel"]:
-        """Get job status with project validation"""
+        """
+        Get the status of a job, ensuring it belongs to the project.
+        """
         with db_context() as db:
             return (db.query(cls)
-                   .filter(cls.id == job_id, cls.project_id == project_id)
-                   .first())
+                    .filter(cls.id == job_id, cls.project_id == project_id)
+                    .first())
 
     def get_model_summary(self) -> str:
-        """Get a summary of models used in this job's tasks"""
+        """
+        Get a summary of models used in this job's tasks.
+        """
         with db_context() as db:
             tasks = db.query(TaskModel).filter(TaskModel.job_id == self.id).all()
             
@@ -153,7 +191,9 @@ class JobModel(Base):
 
     @classmethod
     def count_jobs(cls, project_id: str) -> int:
-        """Get total count of jobs for a project"""
+        """
+        Get the total count of jobs for a project.
+        """
         with db_context() as db:
             return db.query(cls).filter(cls.project_id == project_id).count()
 
@@ -184,7 +224,9 @@ class TaskModel(Base):
 
     @classmethod
     def start(cls, job_id: str, task_number: int, challenge_id: str) -> str:
-        """Start a new task and return its ID"""
+        """
+        Start a new task and return its ID.
+        """
         task_id = str(uuid.uuid4())
         with db_context() as db:
             task = cls(
@@ -200,7 +242,9 @@ class TaskModel(Base):
 
     @classmethod
     def executed(cls, task_id: str, input: any, output: any, details: dict, logs: dict):
-        """Mark task as executed with results"""
+        """
+        Update the task as executed with results and logs.
+        """
         with db_context() as db:
             task = db.query(cls).filter(cls.id == task_id).one()
             task.status = TaskStatus.EVALUATING
@@ -213,7 +257,9 @@ class TaskModel(Base):
 
     @classmethod
     def evaluated(cls, task_id: str, spec: dict, passed: bool, score: float, details: dict, logs: dict):
-        """Mark task as evaluated and completed"""
+        """
+        Update the task as evaluated and completed.
+        """
         with db_context() as db:
             task = db.query(cls).filter(cls.id == task_id).one()
             task.status = TaskStatus.COMPLETED if passed else TaskStatus.FAILED
@@ -227,7 +273,9 @@ class TaskModel(Base):
 
     @classmethod
     def fail(cls, task_id: str, error: str):
-        """Mark task as failed with error"""
+        """
+        Mark the task as failed with an error message.
+        """
         with db_context() as db:
             task = db.query(cls).filter(cls.id == task_id).one()
             task.status = TaskStatus.FAILED
@@ -237,45 +285,57 @@ class TaskModel(Base):
 
     @classmethod
     def list(cls, job_id: str):
-        """List all tasks for a job"""
+        """
+        List all tasks associated with a job.
+        """
         with db_context() as db:
             return db.query(cls).filter(cls.job_id == job_id).all()
 
     @classmethod
     def get_status_map(cls, job_id: str) -> Dict[str, str]:
-        """Get status map for all tasks in a job"""
+        """
+        Get a mapping of task IDs to their statuses for a job.
+        """
         with db_context() as db:
             tasks = db.query(cls).filter(cls.job_id == job_id).all()
             return {task.id: task.status for task in tasks}
         
     @classmethod
     def find_same_tasks(cls, project_id: str, challenge_id: str, limit: int = 10, offset: int = 0) -> List["TaskModel"]:
-        """Find tasks with the same challenge ID"""
+        """
+        Find tasks with the same challenge ID within a project.
+        """
         with db_context() as db:
             return (db.query(cls)
-                   .join(JobModel, cls.job_id == JobModel.id)
-                   .filter(cls.challenge_id == challenge_id, JobModel.project_id == project_id)
-                   .order_by(cls.created_at.desc())
-                   .offset(offset)
-                   .limit(limit)
-                   .all())
+                    .join(JobModel, cls.job_id == JobModel.id)
+                    .filter(cls.challenge_id == challenge_id, JobModel.project_id == project_id)
+                    .order_by(cls.created_at.desc())
+                    .offset(offset)
+                    .limit(limit)
+                    .all())
 
+
+# Database session management
 
 # Global variable to store SessionLocal
 _SessionLocal = None
 
-# Initialize SQLAlchemy
 def init_db():
+    """
+    Initialize the database engine and create tables if they don't exist.
+    """
     DATABASE_URL = "sqlite:///./.multinear/multinear.db"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
     global _SessionLocal
     _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    # Create tables
+    # Create tables defined by the models
     Base.metadata.create_all(bind=engine)
 
 def _create_session():
-    """Internal function to create a new database session."""
+    """
+    Internal function to create a new database session.
+    """
     global _SessionLocal
     if _SessionLocal is None:
         init_db()
@@ -283,7 +343,9 @@ def _create_session():
 
 @contextmanager
 def db_context():
-    """Get a database session as a context manager."""
+    """
+    Provide a transactional scope around a series of operations.
+    """
     db = _create_session()
     try:
         yield db
@@ -291,6 +353,8 @@ def db_context():
         db.close()
 
 def get_db():
-    """Get a database session - for FastAPI dependency injection."""
+    """
+    Get a database session for FastAPI dependency injection.
+    """
     with db_context() as db:
         yield db

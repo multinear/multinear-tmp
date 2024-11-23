@@ -3,11 +3,17 @@ from typing import Optional, Dict, List
 
 
 class Project(BaseModel):
+    """
+    Schema representing a project.
+    """
     id: str
     name: str
     description: str
 
 class JobDetails(BaseModel):
+    """
+    Schema representing job details and status.
+    """
     project_id: str
     job_id: str
     status: str
@@ -17,12 +23,15 @@ class JobDetails(BaseModel):
     details: Optional[Dict] = None
 
 class RecentRun(BaseModel):
+    """
+    Schema representing a recent run summary.
+    """
     id: str
     revision: str
     model: str
     score: float
     totalTests: int
-    pass_: int = Field(alias='pass')  # 'pass' is a Python keyword
+    pass_: int = Field(alias='pass')  # 'pass' is a Python keyword, so we use an alias
     fail: int
     regression: int
     bookmarked: Optional[bool] = False
@@ -31,6 +40,9 @@ class RecentRun(BaseModel):
     finished_at: Optional[str] = None
 
 class TaskDetails(BaseModel):
+    """
+    Schema representing detailed information about a task.
+    """
     id: str
     challenge_id: str
     job_id: str
@@ -51,6 +63,9 @@ class TaskDetails(BaseModel):
     finished_at: Optional[str] = None
 
 class FullRunDetails(BaseModel):
+    """
+    Schema representing all details of a run, including tasks.
+    """
     id: str
     project: Project
     details: Dict
@@ -59,5 +74,8 @@ class FullRunDetails(BaseModel):
     tasks: List[TaskDetails]
 
 class RecentRunsResponse(BaseModel):
+    """
+    Schema representing the response for recent runs API.
+    """
     runs: List[RecentRun]
     total: int

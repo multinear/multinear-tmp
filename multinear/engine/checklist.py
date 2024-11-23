@@ -1,12 +1,13 @@
 import yaml
 from autoevals.llm import LLMClassifier
-
 import json
 from autoevals.llm import OpenAILLMClassifier, DEFAULT_MODEL
 from braintrust_core.score import Score
 
-
 class CustomClassifier(LLMClassifier):
+    """
+    Base class to create custom LLM classifiers by overriding the prompt.
+    """
     prompt = ""  # Placeholder to be overridden in subclasses
 
     def __new__(cls):
@@ -22,7 +23,7 @@ class CustomClassifier(LLMClassifier):
 class ChecklistClassifier(CustomClassifier):
     """
     Evaluate whether an LLM-generated answer meets all criteria defined in a checklist.
-    
+
     Inherits from CustomClassifier to utilize YAML-defined prompts and scoring.
     """
     prompt = """
@@ -51,14 +52,15 @@ choice_scores:
   "D": 0
 """
 
-
 class ChecklistClassifier2(OpenAILLMClassifier):
     """
     Evaluate each item in a checklist individually with detailed scoring and rationale.
-    Uses function calling to get structured feedback on each checklist criterion.
+
+    Uses OpenAI's function calling to get structured feedback on each checklist criterion.
     """
     
     def __init__(self, model=DEFAULT_MODEL, **kwargs):
+        # Define the conversation messages
         messages = [
             {
                 "role": "system",
@@ -101,6 +103,7 @@ Evaluate each checklist item individually, providing a score and detailed ration
             "required": ["evaluations", "overall_score"]
         }
 
+        # Define the evaluation function for OpenAI's function calling
         tools = [{
             "type": "function",
             "function": {
@@ -120,7 +123,9 @@ Evaluate each checklist item individually, providing a score and detailed ration
         )
 
     def _process_response(self, resp):
-        """Process the function call response and calculate the final score"""
+        """
+        Process the function call response and calculate the final score.
+        """
         if "tool_calls" not in resp:
             raise ValueError("No tool call found in response")
             
@@ -128,6 +133,7 @@ Evaluate each checklist item individually, providing a score and detailed ration
         if tool_call["function"]["name"] != "evaluate_checklist":
             raise ValueError(f"Unexpected tool call ({tool_call['function']['name']}) found in response")
             
+        # Parse the arguments returned by the function call
         result = json.loads(tool_call["function"]["arguments"])
         
         return Score(
@@ -140,6 +146,9 @@ Evaluate each checklist item individually, providing a score and detailed ration
         )
 
     def _build_args(self, output, expected, **kwargs):
+        """
+        Build the arguments for the LLM classifier, including parsing YAML if necessary.
+        """
         # Parse the YAML checklist if it's provided as a string
         if isinstance(expected, str):
             try:

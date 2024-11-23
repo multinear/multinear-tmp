@@ -6,28 +6,28 @@ from pathlib import Path
 from .api.router import init_api, api_router
 
 
-# Initialize API
+# Initialize the API and database
 init_api()
 
-# Create FastAPI app with custom docs URLs
+# Create the FastAPI application with custom documentation URLs
 app = FastAPI(
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    docs_url="/api/docs",           # Swagger UI
+    redoc_url="/api/redoc",         # Redoc
+    openapi_url="/api/openapi.json" # OpenAPI JSON schema
 )
 
-# Add CORS middleware
+# Add CORS middleware to handle cross-origin requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],       # Allow all origins (update in production)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API router
+# Include the API router with all endpoints
 app.include_router(api_router)
 
-# Serve frontend
+# Serve the frontend static files (Svelte app)
 frontend_path = Path(__file__).parent.parent / "multinear" / "frontend" / "build"
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

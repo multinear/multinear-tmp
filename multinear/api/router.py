@@ -10,16 +10,17 @@ from ..engine.storage import init_db, ProjectModel, JobModel, TaskModel, TaskSta
 
 
 def init_api():
+    # Initialize the database and read the project configuration
     init_db()
 
-    # Get the current working directory and load multinear.yaml
+    # Get the current working directory
     current_dir = Path.cwd()
 
-    # Read project configuration from local multinear.yaml
+    # Read project configuration from the local .multinear/config.yaml
     with open(current_dir / ".multinear" / "config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    # Create single project configuration
+    # Extract project details
     project_id = config["project"]["id"]
     project_data = {
         "id": project_id,
@@ -28,7 +29,7 @@ def init_api():
         "folder": str(current_dir)
     }
 
-    # Update project in database on startup
+    # Update or create the project in the database on startup
     ProjectModel.save(
         id=project_id,
         name=project_data["name"],
@@ -38,16 +39,19 @@ def init_api():
 
 
 def background_job(project_id: str, job_id: str):
-    """Run the experiment for the given project"""
+    """
+    Background task to run the experiment for the given project.
+    """
     try:
         project = ProjectModel.find(project_id)
         job = JobModel.find(job_id)
         
+        # Run the experiment and handle status updates
         for update in run_experiment(project.to_dict(), job_id):
             # Add status map from TaskModel to the update
             update["status_map"] = TaskModel.get_status_map(job_id)
             
-            # Update job status in DB
+            # Update job status in the database
             job.update(
                 status=update["status"],
                 total_tasks=update.get("total", 0),
@@ -55,8 +59,10 @@ def background_job(project_id: str, job_id: str):
                 details=update
             )
 
+        # Mark the job as finished
         job.finish()
     except Exception as e:
+        # Handle exceptions and update the job as failed
         print(f"Error running experiment API: {e}")
         job = JobModel.find(job_id)
         job.update(
@@ -67,11 +73,14 @@ def background_job(project_id: str, job_id: str):
             }
         )
 
-# Create API router
+# Create the FastAPI router for API endpoints
 api_router = APIRouter(prefix="/api")
 
 @api_router.get("/projects", response_model=List[Project])
 async def get_projects():
+    """
+    Get the list of available projects.
+    """
     return [
         Project(id=p.id, name=p.name, description=p.description)
         for p in ProjectModel.list()
@@ -79,9 +88,13 @@ async def get_projects():
 
 @api_router.post("/jobs/{project_id}", response_model=JobDetails)
 async def create_job(project_id: str, background_tasks: BackgroundTasks):
+    """
+    Create a new job for the specified project and start it in the background.
+    """
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
     
+    # Start a new job and add it to background tasks
     job_id = JobModel.start(project_id)
     background_tasks.add_task(background_job, project_id, job_id)
     
@@ -96,6 +109,9 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
 
 @api_router.get("/jobs/{project_id}/{job_id}/status", response_model=JobDetails)
 async def get_job_status(project_id: str, job_id: str):
+    """
+    Get the status of a specific job.
+    """
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -120,6 +136,9 @@ async def get_recent_runs(
     limit: int = Query(5, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    """
+    Get a list of recent runs for a project with pagination.
+    """
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -134,6 +153,7 @@ async def get_recent_runs(
         job_data = job.details or {}
         model = job.get_model_summary()
 
+        # Calculate score and pass/fail statistics
         total = passed = failed = regression = score = 0
         task_status_map = job_data.get("status_map", {})
         if task_status_map:
@@ -162,6 +182,9 @@ async def get_recent_runs(
     return RecentRunsResponse(runs=runs, total=total_runs)
 
 def _get_task_details(task: TaskModel):
+    """
+    Helper function to convert a TaskModel to TaskDetails schema.
+    """
     return TaskDetails(
         id=task.id,
         job_id=task.job_id,
@@ -185,6 +208,9 @@ def _get_task_details(task: TaskModel):
 
 @api_router.get("/run-details/{run_id}", response_model=FullRunDetails)
 async def get_run_details(run_id: str):
+    """
+    Get detailed information about a specific run, including tasks.
+    """
     job = JobModel.find(run_id)
     if not job:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -212,8 +238,11 @@ async def get_run_details(run_id: str):
         tasks=task_details
     )
 
-# let's write a new API to find tasks with the same challenge ID
+# API to find tasks with the same challenge ID
 @api_router.get("/same-tasks/{project_id}/{challenge_id}", response_model=List[TaskDetails])
 async def get_same_tasks(project_id: str, challenge_id: str, limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0)):
+    """
+    Find tasks within a project that have the same challenge ID.
+    """
     tasks = TaskModel.find_same_tasks(project_id, challenge_id, limit, offset)
     return [_get_task_details(task) for task in tasks]
