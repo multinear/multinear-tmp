@@ -3,6 +3,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
+from .details import print_details
 from ..utils import get_current_project
 from ...engine.run import run_experiment
 from ...engine.storage import JobModel, TaskModel
@@ -103,7 +104,6 @@ def handle(args):
         f.write(plain_output)
     
     # Append detailed information
-    from .details import print_details
     console_plain = Console(no_color=True, force_terminal=False, width=120)
     with console_plain.capture() as capture:
         print_details(console_plain, job)
