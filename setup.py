@@ -7,7 +7,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'multinear=multinear.cli:main',
+            'multinear=multinear.cli.main:main',
         ],
     },
     install_requires=[

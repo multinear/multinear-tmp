@@ -16,4 +16,4 @@ dependencies = [
 ]
 
 [project.scripts]
-multinear = "multinear.cli:main"
+multinear = "multinear.cli.main:main"
