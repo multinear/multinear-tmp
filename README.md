@@ -118,13 +118,48 @@ tasks:
 
 ### Running Experiments
 
-Start an experiment by running a new job:
+You can run experiments either through the command line interface (CLI) or the web frontend.
+
+#### Using the CLI
+
+Run an experiment using the `run` command:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/jobs/my-genai-project
+multinear run
 ```
 
-Or use the frontend interface to initiate a run.
+This will:
+- Start a new experiment run
+- Show real-time progress with a progress bar
+- Display current status and results
+- Save detailed output to `.multinear/last_output.txt`
+
+View recent experiment results:
+```bash
+multinear recent
+```
+
+Get detailed information about a specific run:
+```bash
+multinear details <run-id>
+```
+
+#### Using the Frontend
+
+1. Start the web server if not already running:
+```bash
+multinear web
+```
+
+2. Open `http://127.0.0.1:8000` in your browser
+
+3. Click "Run Experiment" to start an experiment
+
+The frontend provides:
+- Real-time progress tracking
+- Interactive results visualization
+- Detailed task-level information
+- Ability to compare multiple runs
 
 ## Analyzing Results
 
@@ -139,13 +174,13 @@ Once the experiment run is complete, you can analyze the results via the fronten
 
 Multinear consists of several components:
 
-- **CLI Tool (`cli.py`)**: Command-line interface for initializing projects and starting the web server.
-- **Web Server (`main.py`)**: A FastAPI application serving API endpoints and static frontend files.
+- **CLI Tool (`cli/main.py`)**: Command-line interface for initializing projects and starting the web server.
+- **Web Server (`main.py`)**: A FastAPI application serving API endpoints and static Svelte frontend files.
 - **Engine (`engine/` Directory)**:
   - **Run Management (`run.py`)**: Handles execution of tasks and evaluation.
   - **Storage (`storage.py`)**: Manages data models and database operations using SQLAlchemy.
   - **Evaluation (`evaluate.py`, `checklist.py`)**: Provides evaluation mechanisms for task outputs.
-- **API (`api/` Directory)**: Defines API routes and schemas for interaction with the frontend and external tools.
+- **API (`api/` Directory)**: Defines API routes and schemas for interaction with the frontend.
 - **Utilities (`utils/capture.py`)**: Captures task execution output and logs.
 - **Frontend**: A Svelte-based interface for interacting with the platform (located in `multinear/frontend/`).
 
