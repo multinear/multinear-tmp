@@ -7,8 +7,8 @@ import re
 import tqdm
 from rich.console import Console
 from rich.table import Table
-import yaml
 from datetime import datetime, timezone
+from typing import Optional
 
 from .engine.run import run_experiment
 from .engine.storage import init_project_db, JobModel, ProjectModel, TaskModel, TaskStatus
@@ -287,6 +287,160 @@ def show_recent_runs():
     legend.add_row("[green]█[/green] Pass", "[red]█[/red] Fail", "[yellow]█[/yellow] Regression")
     console.print("\nLegend:", legend)
 
+def format_task_status(status: str) -> str:
+    """Get colored status string."""
+    if status == TaskStatus.COMPLETED:
+        return f"[green]{status}[/green]"
+    elif status == TaskStatus.FAILED:
+        return f"[red]{status}[/red]"
+    return f"[yellow]{status}[/yellow]"
+
+def find_run_by_partial_id(partial_id: str) -> Optional[JobModel]:
+    """
+    Find a run by partial ID (last N characters).
+    Returns the most recent matching run if multiple found.
+    """
+    if not is_project_initialized():
+        return None
+
+    project_id = init_project_db()
+    
+    # Get recent jobs and find one with matching partial ID
+    jobs = JobModel.list_recent(project_id, limit=100)  # Increase limit to search more runs
+    
+    matching_jobs = [
+        job for job in jobs 
+        if job.id.endswith(partial_id) or job.id == partial_id
+    ]
+    
+    if not matching_jobs:
+        return None
+        
+    # Return the most recent matching job
+    return matching_jobs[0]
+
+def show_run_details(partial_id: str):
+    """
+    Show detailed information about a specific run.
+    """
+    # Find the run
+    job = find_run_by_partial_id(partial_id)
+    if not job:
+        print(f"Error: No run found matching ID '{partial_id}'")
+        return
+    
+    project = ProjectModel.find(job.project_id)
+    tasks = TaskModel.list(job.id)
+    
+    console = Console()
+    
+    # Header
+    console.print(f"\n[bold]Run: {job.id[-8:]} (Full ID: {job.id})[/bold]")
+    console.print(f"Project: {project.name}")
+    console.print(f"Created: {job.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Summary Card
+    summary = Table(show_header=False, box=None)
+    summary.add_column("Metric", style="cyan")
+    summary.add_column("Value")
+    
+    summary.add_row("Status", format_task_status(job.status))
+    summary.add_row("Total Tasks", str(len(tasks)))
+    summary.add_row("Model", job.details.get("model", "N/A") if job.details else "N/A")
+    
+    console.print("\n[bold]Summary[/bold]")
+    console.print(summary)
+    
+    # Tasks Table
+    tasks_table = Table(
+        title="\nTasks",
+        show_header=True,
+        header_style="bold cyan"
+    )
+    
+    tasks_table.add_column("Task ID", style="dim")
+    tasks_table.add_column("Started")
+    tasks_table.add_column("Duration")
+    tasks_table.add_column("Model")
+    tasks_table.add_column("Status")
+    tasks_table.add_column("Score", justify="right")
+    
+    for task in tasks:
+        # Format duration
+        duration = format_duration(
+            task.created_at.replace(tzinfo=timezone.utc).isoformat(),
+            task.finished_at.replace(tzinfo=timezone.utc).isoformat() if task.finished_at else None
+        )
+        
+        # Format score with color
+        score = task.eval_score or 0
+        score_color = get_score_color(score)
+        score_text = f"[{score_color}]{score:.2f}[/]"
+        
+        tasks_table.add_row(
+            task.id[-8:],
+            task.created_at.strftime("%H:%M:%S"),
+            duration,
+            task.task_details.get("model", "N/A") if task.task_details else "N/A",
+            format_task_status(task.status),
+            score_text
+        )
+    
+    console.print(tasks_table)
+    
+    # Detailed Task View
+    for task in tasks:
+        console.print(f"\n[bold cyan]Task Details: {task.id[-8:]}[/bold cyan]")
+        
+        # Task Information
+        task_details = Table(show_header=False, box=None)
+        task_details.add_column("Field", style="cyan")
+        task_details.add_column("Value")
+        
+        task_details.add_row("Status", format_task_status(task.status))
+        task_details.add_row("Created", task.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+        if task.finished_at:
+            task_details.add_row("Finished", task.finished_at.strftime("%Y-%m-%d %H:%M:%S"))
+        task_details.add_row("Duration", format_duration(
+            task.created_at.replace(tzinfo=timezone.utc).isoformat(),
+            task.finished_at.replace(tzinfo=timezone.utc).isoformat() if task.finished_at else None
+        ))
+        
+        console.print(task_details)
+        
+        # Input
+        if task.task_input:
+            console.print("\n[bold]Input:[/bold]")
+            input_text = task.task_input['str'] if isinstance(task.task_input, dict) and 'str' in task.task_input else str(task.task_input)
+            console.print(input_text)
+        
+        # Output
+        if task.task_output:
+            console.print("\n[bold]Output:[/bold]")
+            output_text = task.task_output['str'] if isinstance(task.task_output, dict) and 'str' in task.task_output else str(task.task_output)
+            console.print(output_text)
+        
+        # Evaluation Results
+        if task.eval_details:
+            console.print("\n[bold]Evaluation Results:[/bold]")
+            eval_table = Table(show_header=True)
+            eval_table.add_column("Criterion")
+            eval_table.add_column("Score", justify="right")
+            eval_table.add_column("Rationale")
+            
+            for eval in task.eval_details.get("evaluations", []):
+                score = eval["score"]
+                score_color = get_score_color(score)
+                eval_table.add_row(
+                    eval["criterion"],
+                    f"[{score_color}]{score:.2f}[/]",
+                    eval["rationale"]
+                )
+            
+            console.print(eval_table)
+        
+        # console.print("\n" + "─" * 80)  # Separator between tasks
+
 def main():
     parser = argparse.ArgumentParser(description="Multinear CLI tool")
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
@@ -299,6 +453,10 @@ def main():
 
     # Define the 'recent' command
     recent_cmd = subparsers.add_parser('recent', help='Show recent experiment runs')
+
+    # Define the 'details' command
+    details_cmd = subparsers.add_parser('details', help='Show detailed information about a specific run')
+    details_cmd.add_argument('run_id', help='ID of the run to show')
 
     # Define the 'web' and 'web_dev' commands
     web_cmd = subparsers.add_parser('web', help='Start platform web server')
@@ -316,6 +474,8 @@ def main():
         run_experiment_command()
     elif args.command == 'recent':
         show_recent_runs()
+    elif args.command == 'details':
+        show_run_details(args.run_id)
     elif args.command in ['web', 'web_dev']:
         if not is_project_initialized(): return
         
