@@ -6,18 +6,19 @@ import random
 import hashlib
 import json
 
-from .storage import TaskModel, TaskStatus
+from .storage import JobModel,TaskModel, TaskStatus
 from .evaluate import evaluate
 from ..utils.capture import OutputCapture
+from ..utils.git import get_git_revision
 
 
-def run_experiment(project_config: Dict[str, Any], job_id: str):
+def run_experiment(project_config: Dict[str, Any], job: JobModel):
     """
     Run an experiment using the task_runner.run_task function from the project folder
     
     Args:
         project_config: Project configuration dictionary containing folder path
-        job_id: ID of the job being run
+        job: JobModel instance for the job being run
     
     Yields:
         Dict containing status updates, final results, and status map
@@ -29,6 +30,11 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
     config_path = project_folder / ".multinear" / "config.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found at {config_path}")
+    
+    # Save git revision to job details
+    git_revision = get_git_revision(project_folder)
+    print(f"Git revision: {git_revision}")
+    job.update(details={"git_revision": get_git_revision(project_folder)})
 
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -66,7 +72,7 @@ def run_experiment(project_config: Dict[str, Any], job_id: str):
 
                 # Start new task
                 task_id = TaskModel.start(
-                    job_id=job_id,
+                    job_id=job.id,
                     task_number=current_task,
                     challenge_id=challenge_id
                 )

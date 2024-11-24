@@ -100,7 +100,7 @@ class JobModel(Base):
         """
         job_id = str(uuid.uuid4())
         with db_context() as db:
-            job = cls(id=job_id, project_id=project_id, status="started")
+            job = cls(id=job_id, project_id=project_id, status=TaskStatus.STARTING)
             db.add(job)
             db.commit()
             return job_id
@@ -119,17 +119,26 @@ class JobModel(Base):
         """
         with db_context() as db:
             job = db.query(JobModel).filter(JobModel.id == self.id).one()
-            job.status = status
-            job.total_tasks = total_tasks
-            job.current_task = current_task
+            if status is not None:
+                job.status = status
+            if total_tasks is not None:
+                job.total_tasks = total_tasks
+            if current_task is not None:
+                job.current_task = current_task
             if details is not None:
-                job.details = details
+                current_details = job.details or {}
+                merged_details = {**current_details, **details}
+                job.details = merged_details
             db.commit()
             # Update the current instance
-            self.status = status
-            self.total_tasks = total_tasks
-            self.current_task = current_task
-            self.details = details
+            if status is not None:
+                self.status = status
+            if total_tasks is not None:
+                self.total_tasks = total_tasks
+            if current_task is not None:
+                self.current_task = current_task
+            if details is not None:
+                self.details = merged_details
 
     def finish(self, status: str = TaskStatus.COMPLETED):
         """

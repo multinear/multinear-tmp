@@ -99,7 +99,7 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
     return JobDetails(
         project_id=project_id,
         job_id=job_id,
-        status="started",
+        status=TaskStatus.STARTING,
         total_tasks=0,
         task_status_map={},
         details={}
