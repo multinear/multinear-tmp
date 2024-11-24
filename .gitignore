@@ -1,7 +1,6 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-multinear/build/
 dist/
 wheels/
 *.egg-info
