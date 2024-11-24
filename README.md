@@ -186,7 +186,7 @@ Multinear consists of several components:
 
 ## Contributing
 
-We welcome contributions to Multinear! Please follow these steps:
+Contributions are welcome! To contribute:
 
 1. Fork the repository.
 2. Create a new branch for your feature or bugfix.
