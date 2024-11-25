@@ -6,7 +6,7 @@ import random
 import hashlib
 import json
 
-from .storage import JobModel,TaskModel, TaskStatus
+from .storage import JobModel, TaskModel, TaskStatus
 from .evaluate import evaluate
 from ..utils.capture import OutputCapture
 from ..utils.git import get_git_revision
@@ -30,7 +30,7 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel):
     config_path = project_folder / ".multinear" / "config.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found at {config_path}")
-    
+
     # Save git revision to job details
     git_revision = get_git_revision(project_folder)
     print(f"Git revision: {git_revision}")
@@ -67,8 +67,10 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel):
             try:
                 input = task["input"]
                 challenge_id = task.get("id", None)
-                if not challenge_id: # Calculate challenge ID from input
-                    challenge_id = hashlib.sha256(json.dumps(input).encode()).hexdigest()
+                if not challenge_id:  # Calculate challenge ID from input
+                    challenge_id = hashlib.sha256(
+                        json.dumps(input).encode()
+                    ).hexdigest()
 
                 # Start new task
                 task_id = TaskModel.start(

@@ -2,10 +2,15 @@ from fastapi import BackgroundTasks, HTTPException, APIRouter, Query
 from typing import List
 from datetime import timezone
 
-from ..api.schemas import Project, JobDetails, FullRunDetails, TaskDetails, RecentRunsResponse
+from ..api.schemas import (
+    Project,
+    JobDetails,
+    FullRunDetails,
+    TaskDetails,
+    RecentRunsResponse,
+)
 from ..engine.run import run_experiment
 from ..engine.storage import ProjectModel, JobModel, TaskModel, TaskStatus
-
 
 
 def background_job(project_id: str, job_id: str):
@@ -28,7 +33,7 @@ def background_job(project_id: str, job_id: str):
         job = JobModel.find(job_id)
         
         # Run the experiment and handle status updates
-        for update in run_experiment(project.to_dict(), job_id):
+        for update in run_experiment(project.to_dict(), job):
             # Add status map from TaskModel to the update
             update["status_map"] = TaskModel.get_status_map(job_id)
             
@@ -80,7 +85,8 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
 
     Args:
         project_id (str): The ID of the project for which the job is to be created.
-        background_tasks (BackgroundTasks): FastAPI BackgroundTasks for asynchronous execution.
+        background_tasks (BackgroundTasks): FastAPI BackgroundTasks for asynchronous
+        execution.
 
     Returns:
         JobDetails: Details of the created job.
@@ -165,13 +171,13 @@ async def get_recent_runs(
     # Verify that the project exists
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
     # Get total count of runs for this project
     total_runs = JobModel.count_jobs(project_id)
-    
+
     # Retrieve recent jobs based on limit and offset for pagination
     recent_jobs = JobModel.list_recent(project_id, limit, offset)
-    
+
     runs = []
     for job in recent_jobs:
         job_data = job.details or {}
@@ -182,27 +188,39 @@ async def get_recent_runs(
         task_status_map = job_data.get("status_map", {})
         if task_status_map:
             total = len(task_status_map)
-            passed = sum(1 for status in task_status_map.values() if status == TaskStatus.COMPLETED)
-            failed = sum(1 for status in task_status_map.values() if status == TaskStatus.FAILED)
+            passed = sum(
+                1
+                for status in task_status_map.values()
+                if status == TaskStatus.COMPLETED
+            )
+            failed = sum(
+                1 for status in task_status_map.values() if status == TaskStatus.FAILED
+            )
             regression = total - passed - failed
             if total > 0:
                 score = (passed / total)
 
         # Append the run details to the list
-        runs.append({
-            "id": job.id,
-            "created_at": job.created_at.replace(tzinfo=timezone.utc).isoformat(),
-            "finished_at": job.finished_at.replace(tzinfo=timezone.utc).isoformat() if job.finished_at else None,
-            "revision": job_data.get("revision", ""),
-            "model": model,
-            "score": score,
-            "totalTests": total,
-            "pass": passed,
-            "fail": failed,
-            "regression": regression,
-            # "bookmarked": False,
-            # "noted": False
-        })
+        runs.append(
+            {
+                "id": job.id,
+                "created_at": job.created_at.replace(tzinfo=timezone.utc).isoformat(),
+                "finished_at": (
+                    job.finished_at.replace(tzinfo=timezone.utc).isoformat()
+                    if job.finished_at
+                    else None
+                ),
+                "revision": job_data.get("git_revision", ""),
+                "model": model,
+                "score": score,
+                "totalTests": total,
+                "pass": passed,
+                "fail": failed,
+                "regression": regression,
+                # "bookmarked": False,
+                # "noted": False
+            }
+        )
 
     return RecentRunsResponse(runs=runs, total=total_runs)
 
@@ -223,8 +241,16 @@ def _get_task_details(task: TaskModel):
         challenge_id=task.challenge_id,
         status=task.status,
         error=task.error,
-        task_input={'str': task.task_input} if isinstance(task.task_input, str) else task.task_input,
-        task_output={'str': task.task_output} if isinstance(task.task_output, str) else task.task_output,
+        task_input=(
+            {'str': task.task_input}
+            if isinstance(task.task_input, str)
+            else task.task_input
+        ),
+        task_output=(
+            {'str': task.task_output}
+            if isinstance(task.task_output, str)
+            else task.task_output
+        ),
         task_details=task.task_details,
         task_logs={'logs': task.task_logs} if task.task_logs else None,
         eval_spec=task.eval_spec,
@@ -233,9 +259,21 @@ def _get_task_details(task: TaskModel):
         eval_details=task.eval_details,
         eval_logs={'logs': task.eval_logs} if task.eval_logs else None,
         created_at=task.created_at.replace(tzinfo=timezone.utc).isoformat(),
-        executed_at=task.executed_at.replace(tzinfo=timezone.utc).isoformat() if task.executed_at else None,
-        evaluated_at=task.evaluated_at.replace(tzinfo=timezone.utc).isoformat() if task.evaluated_at else None,
-        finished_at=task.finished_at.replace(tzinfo=timezone.utc).isoformat() if task.finished_at else None
+        executed_at=(
+            task.executed_at.replace(tzinfo=timezone.utc).isoformat()
+            if task.executed_at
+            else None
+        ),
+        evaluated_at=(
+            task.evaluated_at.replace(tzinfo=timezone.utc).isoformat()
+            if task.evaluated_at
+            else None
+        ),
+        finished_at=(
+            task.finished_at.replace(tzinfo=timezone.utc).isoformat()
+            if task.finished_at
+            else None
+        ),
     )
 
 
@@ -257,16 +295,16 @@ async def get_run_details(run_id: str):
     job = JobModel.find(run_id)
     if not job:
         raise HTTPException(status_code=404, detail="Run not found")
-    
+
     # Retrieve project details associated with the job
     project = ProjectModel.find(job.project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
     # Retrieve all tasks associated with the job
     tasks = TaskModel.list(run_id)
     task_details = [_get_task_details(task) for task in tasks]
-    
+
     # Construct and return the full run details
     return FullRunDetails(
         id=run_id,
@@ -282,8 +320,15 @@ async def get_run_details(run_id: str):
     )
 
 
-@api_router.get("/same-tasks/{project_id}/{challenge_id}", response_model=List[TaskDetails])
-async def get_same_tasks(project_id: str, challenge_id: str, limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0)):
+@api_router.get(
+    "/same-tasks/{project_id}/{challenge_id}", response_model=List[TaskDetails]
+)
+async def get_same_tasks(
+    project_id: str,
+    challenge_id: str,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
     """
     Find and retrieve tasks within a project that share the same challenge ID.
 

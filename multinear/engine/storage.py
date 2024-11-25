@@ -81,7 +81,7 @@ class ProjectModel(Base):
 
 class JobModel(Base):
     __tablename__ = "jobs"
-    
+
     id = Column(String, primary_key=True, index=True)
     project_id = Column(String, ForeignKey("projects.id"), nullable=False)
     status = Column(String, nullable=False)
@@ -113,7 +113,13 @@ class JobModel(Base):
         with db_context() as db:
             return db.query(cls).filter(cls.id == job_id).first()
 
-    def update(self, status: str, total_tasks: int = 0, current_task: Optional[int] = None, details: dict = None):
+    def update(
+        self,
+        status: str = None,
+        total_tasks: int = 0,
+        current_task: Optional[int] = None,
+        details: dict = None,
+    ):
         """
         Update the job status and other fields.
         """
@@ -155,7 +161,9 @@ class JobModel(Base):
             self.finished_at = finished_at
 
     @classmethod
-    def list_recent(cls, project_id: str, limit: int = 5, offset: int = 0) -> List["JobModel"]:
+    def list_recent(
+        cls, project_id: str, limit: int = 5, offset: int = 0
+    ) -> List["JobModel"]:
         """
         List recent jobs for a project with pagination.
         """
@@ -183,13 +191,13 @@ class JobModel(Base):
         """
         with db_context() as db:
             tasks = db.query(TaskModel).filter(TaskModel.job_id == self.id).all()
-            
+
             # Collect unique models from task details
             models = set()
             for task in tasks:
                 if task.task_details and 'model' in task.task_details:
                     models.add(task.task_details['model'])
-            
+
             # Return appropriate summary based on number of unique models
             if len(models) == 0:
                 return "unknown"
@@ -211,7 +219,7 @@ class JobModel(Base):
 
 class TaskModel(Base):
     __tablename__ = "tasks"
-    
+
     id = Column(String, primary_key=True, index=True)
     job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
     challenge_id = Column(String, nullable=False)
@@ -267,7 +275,15 @@ class TaskModel(Base):
             db.commit()
 
     @classmethod
-    def evaluated(cls, task_id: str, spec: dict, passed: bool, score: float, details: dict, logs: dict):
+    def evaluated(
+        cls,
+        task_id: str,
+        spec: dict,
+        passed: bool,
+        score: float,
+        details: dict,
+        logs: dict,
+    ):
         """
         Update the task as evaluated and completed.
         """
@@ -310,26 +326,33 @@ class TaskModel(Base):
         with db_context() as db:
             tasks = db.query(cls).filter(cls.job_id == job_id).all()
             return {task.id: task.status for task in tasks}
-        
+
     @classmethod
-    def find_same_tasks(cls, project_id: str, challenge_id: str, limit: int = 10, offset: int = 0) -> List["TaskModel"]:
+    def find_same_tasks(
+        cls, project_id: str, challenge_id: str, limit: int = 10, offset: int = 0
+    ) -> List["TaskModel"]:
         """
         Find tasks with the same challenge ID within a project.
         """
         with db_context() as db:
-            return (db.query(cls)
-                    .join(JobModel, cls.job_id == JobModel.id)
-                    .filter(cls.challenge_id == challenge_id, JobModel.project_id == project_id)
-                    .order_by(cls.created_at.desc())
-                    .offset(offset)
-                    .limit(limit)
-                    .all())
+            return (
+                db.query(cls)
+                .join(JobModel, cls.job_id == JobModel.id)
+                .filter(
+                    cls.challenge_id == challenge_id, JobModel.project_id == project_id
+                )
+                .order_by(cls.created_at.desc())
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
 
 
 # Database session management
 
 # Global variable to store SessionLocal
 _SessionLocal = None
+
 
 def init_db():
     """
@@ -343,6 +366,7 @@ def init_db():
     # Create tables defined by the models
     Base.metadata.create_all(bind=engine)
 
+
 def _create_session():
     """
     Internal function to create a new database session.
@@ -351,6 +375,7 @@ def _create_session():
     if _SessionLocal is None:
         init_db()
     return _SessionLocal()
+
 
 @contextmanager
 def db_context():
@@ -363,12 +388,14 @@ def db_context():
     finally:
         db.close()
 
+
 def get_db():
     """
     Get a database session for FastAPI dependency injection.
     """
     with db_context() as db:
         yield db
+
 
 def init_project_db():
     """

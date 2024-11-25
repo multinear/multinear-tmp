@@ -10,6 +10,7 @@ class Project(BaseModel):
     name: str
     description: str
 
+
 class JobDetails(BaseModel):
     """
     Schema representing job details and status.
@@ -21,6 +22,7 @@ class JobDetails(BaseModel):
     current_task: Optional[int] = None
     task_status_map: Optional[Dict] = None
     details: Optional[Dict] = None
+
 
 class RecentRun(BaseModel):
     """
@@ -38,6 +40,7 @@ class RecentRun(BaseModel):
     noted: Optional[bool] = False
     created_at: str
     finished_at: Optional[str] = None
+
 
 class TaskDetails(BaseModel):
     """
@@ -62,6 +65,7 @@ class TaskDetails(BaseModel):
     evaluated_at: Optional[str] = None
     finished_at: Optional[str] = None
 
+
 class FullRunDetails(BaseModel):
     """
     Schema representing all details of a run, including tasks.
@@ -72,6 +76,7 @@ class FullRunDetails(BaseModel):
     date: str
     status: str
     tasks: List[TaskDetails]
+
 
 class RecentRunsResponse(BaseModel):
     """

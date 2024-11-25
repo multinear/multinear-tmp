@@ -319,7 +319,7 @@
                                     -
                                 {/if}
                             </Table.Cell>
-                            <Table.Cell>{run.revision}</Table.Cell>
+                            <Table.Cell>{run.revision.slice(-8)}</Table.Cell>
                             <Table.Cell>{run.model}</Table.Cell>
                             <Table.Cell>{run.totalTests}</Table.Cell>
                             <Table.Cell>
