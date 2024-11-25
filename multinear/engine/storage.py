@@ -339,7 +339,9 @@ class TaskModel(Base):
                 db.query(cls)
                 .join(JobModel, cls.job_id == JobModel.id)
                 .filter(
-                    cls.challenge_id == challenge_id, JobModel.project_id == project_id
+                    cls.challenge_id == challenge_id,
+                    JobModel.project_id == project_id,
+                    cls.finished_at.isnot(None)  # Only finished tasks
                 )
                 .order_by(cls.created_at.desc())
                 .offset(offset)
