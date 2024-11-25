@@ -24,7 +24,8 @@ def handle(args):
     partial_id = args.run_id
     job = find_run_by_partial_id(partial_id)
     if not job:
-        print(f"[red]Error:[/red] No run found matching ID '{partial_id}'")
+        console = Console()
+        console.print(f"[red]Error:[/red] No run found matching ID '{partial_id}'")
         return
 
     print_details(Console(), job)
