@@ -250,7 +250,7 @@
                                         {/if}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {task.task_details.model}
+                                        {task.task_details?.model || '-'}
                                     </Table.Cell>
                                     <Table.Cell class="max-w-xs">
                                         {truncateInput(task.task_input)}
