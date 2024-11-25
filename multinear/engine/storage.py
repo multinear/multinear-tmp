@@ -1,4 +1,13 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, ForeignKey, Float, Boolean
+from sqlalchemy import (
+    create_engine,
+    Column,
+    String,
+    Integer,
+    DateTime,
+    ForeignKey,
+    Float,
+    Boolean,
+)
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.types import JSON
 from datetime import datetime, timezone
@@ -26,7 +35,7 @@ class TaskStatus:
 # Define SQLAlchemy models to represent database tables
 class ProjectModel(Base):
     __tablename__ = "projects"
-    
+
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)

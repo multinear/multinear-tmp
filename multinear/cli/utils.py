@@ -12,21 +12,23 @@ def slugify(text: str) -> str:
     text = re.sub(r'[^\w\s-]', '', text)
     return re.sub(r'[-\s]+', '-', text).strip().lower()
 
+
 def format_duration(created_at: str, finished_at: Optional[str]) -> str:
     """Format duration between created_at and finished_at timestamps."""
     if not finished_at:
         return "-"
-    
+
     start = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
     end = datetime.fromisoformat(finished_at.replace('Z', '+00:00'))
     duration = end - start
-    
+
     minutes = duration.seconds // 60
     seconds = duration.seconds % 60
-    
+
     if minutes > 0:
         return f"{minutes}m {seconds}s"
     return f"{seconds}s"
+
 
 def get_score_color(score: float) -> str:
     """Get color for score based on value."""
@@ -36,6 +38,7 @@ def get_score_color(score: float) -> str:
         return "yellow"
     return "red"
 
+
 def format_task_status(status: str) -> str:
     """Get colored status string."""
     if status == TaskStatus.COMPLETED:
@@ -44,6 +47,7 @@ def format_task_status(status: str) -> str:
         return f"[red]{status}[/red]"
     return f"[yellow]{status}[/yellow]"
 
+
 def get_current_project() -> Optional[ProjectModel]:
     """
     Ensure the project is initialized and return the current ProjectModel.
@@ -51,9 +55,12 @@ def get_current_project() -> Optional[ProjectModel]:
     """
     MULTINEAR_CONFIG_DIR = '.multinear'
     console = Console()
-    
+
     if not Path(MULTINEAR_CONFIG_DIR).exists():
-        console.print(f"[red]Error:[/red] {MULTINEAR_CONFIG_DIR} directory not found. Please run 'multinear init' first.")
+        console.print(
+            "[red]Error:[/red] .multinear directory not found. "
+            "Please run 'multinear init' first."
+        )
         return None
     project_id = init_project_db()
     project = ProjectModel.find(project_id)

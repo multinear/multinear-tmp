@@ -1,8 +1,10 @@
+# flake8: noqa: E501
 import yaml
 from autoevals.llm import LLMClassifier
 import json
 from autoevals.llm import OpenAILLMClassifier, DEFAULT_MODEL
 from braintrust_core.score import Score
+
 
 class CustomClassifier(LLMClassifier):
     """
@@ -19,6 +21,7 @@ class CustomClassifier(LLMClassifier):
         cls._SPEC_FILE_CONTENTS = cls.prompt
         spec = yaml.safe_load(cls._SPEC_FILE_CONTENTS)
         return LLMClassifier(cls_name, spec['prompt'], spec['choice_scores'], **kwargs)
+
 
 class ChecklistClassifier(CustomClassifier):
     """
@@ -52,13 +55,15 @@ choice_scores:
   "D": 0
 """
 
+
 class ChecklistClassifier2(OpenAILLMClassifier):
     """
     Evaluate each item in a checklist individually with detailed scoring and rationale.
 
-    Uses OpenAI's function calling to get structured feedback on each checklist criterion.
+    Uses OpenAI's function calling to get structured feedback on each checklist 
+    criterion.
     """
-    
+
     def __init__(self, model=DEFAULT_MODEL, **kwargs):
         # Define the conversation messages
         messages = [
@@ -91,16 +96,30 @@ Evaluate each checklist item individually, providing a score and detailed ration
                     "items": {
                         "type": "object",
                         "properties": {
-                            "criterion": {"type": "string", "description": "The checklist item being evaluated"},
-                            "score": {"type": "number", "minimum": 0, "maximum": 1, "description": "Score between 0 and 1"},
-                            "rationale": {"type": "string", "description": "Detailed explanation for the score"}
+                            "criterion": {
+                                "type": "string",
+                                "description": "The checklist item being evaluated",
+                            },
+                            "score": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                                "description": "Score between 0 and 1",
+                            },
+                            "rationale": {
+                                "type": "string",
+                                "description": "Detailed explanation for the score",
+                            },
                         },
-                        "required": ["criterion", "score", "rationale"]
-                    }
+                        "required": ["criterion", "score", "rationale"],
+                    },
                 },
-                "overall_score": {"type": "number", "description": "Average score across all criteria"}
+                "overall_score": {
+                    "type": "number",
+                    "description": "Average score across all criteria",
+                },
             },
-            "required": ["evaluations", "overall_score"]
+            "required": ["evaluations", "overall_score"],
         }
 
         # Define the evaluation function for OpenAI's function calling
@@ -128,14 +147,14 @@ Evaluate each checklist item individually, providing a score and detailed ration
         """
         if "tool_calls" not in resp:
             raise ValueError("No tool call found in response")
-            
+
         tool_call = resp["tool_calls"][0]
         if tool_call["function"]["name"] != "evaluate_checklist":
             raise ValueError(f"Unexpected tool call ({tool_call['function']['name']}) found in response")
-            
+
         # Parse the arguments returned by the function call
         result = json.loads(tool_call["function"]["arguments"])
-        
+
         return Score(
             name=self.name,
             score=result["overall_score"],

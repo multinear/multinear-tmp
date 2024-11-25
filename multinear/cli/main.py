@@ -15,6 +15,7 @@ def get_parser() -> argparse.ArgumentParser:
 
     return parser
 
+
 def main():
     parser = get_parser()
     args = parser.parse_args()
@@ -32,6 +33,7 @@ def main():
         command_handlers[args.command](args)
     else:
         parser.print_help()
+
 
 if __name__ == '__main__':
     main()

@@ -15,11 +15,11 @@ from ..utils.git import get_git_revision
 def run_experiment(project_config: Dict[str, Any], job: JobModel):
     """
     Run an experiment using the task_runner.run_task function from the project folder
-    
+
     Args:
         project_config: Project configuration dictionary containing folder path
         job: JobModel instance for the job being run
-    
+
     Yields:
         Dict containing status updates, final results, and status map
     """

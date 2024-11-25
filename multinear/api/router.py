@@ -31,12 +31,12 @@ def background_job(project_id: str, job_id: str):
         # Retrieve the project and job from the database
         project = ProjectModel.find(project_id)
         job = JobModel.find(job_id)
-        
+
         # Run the experiment and handle status updates
         for update in run_experiment(project.to_dict(), job):
             # Add status map from TaskModel to the update
             update["status_map"] = TaskModel.get_status_map(job_id)
-            
+
             # Update job status in the database
             job.update(
                 status=update["status"],
@@ -90,18 +90,18 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
 
     Returns:
         JobDetails: Details of the created job.
-    
+
     Raises:
         HTTPException: If the specified project does not exist.
     """
     # Verify that the project exists
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
     # Start a new job and enqueue it as a background task
     job_id = JobModel.start(project_id)
     background_tasks.add_task(background_job, project_id, job_id)
-    
+
     return JobDetails(
         project_id=project_id,
         job_id=job_id,
@@ -123,19 +123,19 @@ async def get_job_status(project_id: str, job_id: str):
 
     Returns:
         JobDetails: Current status and details of the job.
-    
+
     Raises:
         HTTPException: If the project or job is not found.
     """
     # Verify that the project exists
     if not ProjectModel.find(project_id):
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
     # Retrieve the job status, ensuring it belongs to the specified project
     job = JobModel.get_status(project_id, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     details = job.details or {}
     return JobDetails(
         project_id=project_id,
@@ -164,7 +164,7 @@ async def get_recent_runs(
 
     Returns:
         RecentRunsResponse: A response containing recent runs and total count.
-    
+
     Raises:
         HTTPException: If the project does not exist.
     """
@@ -287,7 +287,7 @@ async def get_run_details(run_id: str):
 
     Returns:
         FullRunDetails: Comprehensive details of the run, including tasks.
-    
+
     Raises:
         HTTPException: If the run or associated project is not found.
     """
